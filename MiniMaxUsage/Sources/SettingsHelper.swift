@@ -13,6 +13,8 @@ class SettingsHelper {
     private static let showRequestsKey = "showRequests"
     private static let showResetTimeKey = "showResetTime"
     private static let launchAtLoginKey = "launchAtLogin"
+    private static let autoUpdateEnabledKey = "autoUpdateEnabled"
+    private static let lastUpdateCheckKey = "lastUpdateCheck"
 
     // Daily tracking UserDefaults keys
     private static let dailyLastRecordedDateKey = "dailyLastRecordedDate"
@@ -86,6 +88,45 @@ class SettingsHelper {
         set {
             UserDefaults.standard.set(newValue, forKey: launchAtLoginKey)
             NotificationCenter.default.post(name: .settingsChanged, object: nil)
+        }
+    }
+
+    static var autoUpdateEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: autoUpdateEnabledKey) == nil {
+                return true  // Default to enabled
+            }
+            return UserDefaults.standard.bool(forKey: autoUpdateEnabledKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoUpdateEnabledKey)
+            NotificationCenter.default.post(name: .settingsChanged, object: nil)
+        }
+    }
+
+    static var lastUpdateCheck: Date? {
+        get {
+            return UserDefaults.standard.object(forKey: lastUpdateCheckKey) as? Date
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: lastUpdateCheckKey)
+        }
+    }
+
+    static var lastUpdateCheckFormatted: String {
+        guard let lastCheck = lastUpdateCheck else {
+            return "Never"
+        }
+        let interval = Date().timeIntervalSince(lastCheck)
+        if interval < 3600 {
+            let minutes = Int(interval / 60)
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") ago"
+        } else if interval < 86400 {
+            let hours = Int(interval / 3600)
+            return "\(hours) hour\(hours == 1 ? "" : "s") ago"
+        } else {
+            let days = Int(interval / 86400)
+            return "\(days) day\(days == 1 ? "" : "s") ago"
         }
     }
 
