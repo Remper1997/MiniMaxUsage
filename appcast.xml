@@ -5,5 +5,49 @@
     <link>https://github.com/Remper1997/MiniMaxUsage/releases</link>
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
+  <item>
+    <title>Version 1.5.2</title>
+    <sparkle:version>31</sparkle:version>
+    <sparkle:shortVersionString>1.5.2</sparkle:shortVersionString>
+    <description><![CDATA[
+## MiniMaxUsage v1.5.2
+
+Automated release built by GitHub Actions.
+
+### Changes in this release:
+dee51d3 Fix: push to main using HEAD:refs/heads/main to handle detached HEAD
+7b3bf42 Rewrite appcast generation to use printf instead of heredoc/sed
+b3234f0 Fix YAML syntax error - replace heredoc with printf to avoid <?xml being parsed as YAML header
+1b4757a feat: Implement appcast.xml-based update system with proper version tracking
+eaaed5c fix: properly update CFBundleVersion for Sparkle comparison using PlistBuddy
+b80b5c6 feat: auto-set version from git tag in Info.plist before build
+169ad9b fix: correct Atom feed URL for Sparkle
+9631d9c chore: update Sparkle feed URL and version for update testing
+040e6a4 debug: list identities after import
+b75f374 fix: add key partition list for code signing
+d5f9e35 fix: remove smartcard check from certificate import
+b5bd33a fix: use env vars instead of vars for certificate check
+a32255a fix: show only commits since last release in release notes and add Developer ID signing config
+bb8f554 feat: add Check for Updates menu item and fix scroll bug in Preferences
+b67dc24 chore: add Sparkle Info.plist configuration
+d8b38b4 feat: add Updates section to PreferencesWindow
+ddf00ae feat: initialize Sparkle updater in AppDelegate
+34bc50f feat: add autoUpdate settings to SettingsHelper
+398e514 feat: add UpdateController with Sparkle integration
+ae86df5 feat: add Sparkle SPM dependency for auto-update
+7ccad21 Add implementation plan for auto-update feature
+510e874 Add design spec for auto-update feature
+b1fd166 fix: improve error handling in launchAtLoginChanged with user feedback
+e677111 feat: add launchAtLogin setting to SettingsHelper
+2260167 Add design spec for auto-launch at login feature
+1dc0066 Update actions/checkout from v4 to v6 for Node.js 24 support
+5495068 Use --notes-file instead of --notes for gh release create
+b9ec941 Fix: Remove duplicate 'v' in title and update Node.js to 24
+d6c75d9 Fix YAML syntax error in workflow - use file for release notes
+333d3cf Improve release notes with commit history
+    ]]></description>
+    <pubDate>Thu, 16 Apr 2026 23:56:58 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.5.2/MiniMaxUsage.dmg" sparkle:version="31" sparkle:shortVersionString="1.5.2" type="application/octet-stream" />
+  </item>
   </channel>
 </rss>
