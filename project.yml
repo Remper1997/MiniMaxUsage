@@ -14,6 +14,11 @@ settings:
     CODE_SIGN_STYLE: Manual
     PRODUCT_NAME: MiniMaxUsage
 
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.0.0
+
 targets:
   MiniMaxUsage:
     type: application
@@ -21,6 +26,9 @@ targets:
     sources:
       - path: MiniMaxUsage/Sources
         type: group
+    dependencies:
+      - package: Sparkle
+        product: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.minimaxusage.MiniMaxUsage
