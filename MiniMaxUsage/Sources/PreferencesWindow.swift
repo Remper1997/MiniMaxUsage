@@ -14,6 +14,9 @@ class PreferencesWindow: NSWindowController {
     private var showRequestsCheckbox: NSButton!
     private var showResetCheckbox: NSButton!
     private var launchAtLoginCheckbox: NSButton!
+    private var autoUpdateCheckbox: NSButton!
+    private var lastCheckedLabel: NSTextField!
+    private var checkNowButton: NSButton!
 
     private let refreshOptions: [(String, TimeInterval)] = [
         ("30 seconds", 30),
@@ -35,11 +38,11 @@ class PreferencesWindow: NSWindowController {
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
 
-        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 480))
+        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 560))
         scrollView.documentView = contentView
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 450, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 440),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
@@ -178,6 +181,35 @@ class PreferencesWindow: NSWindowController {
         refreshPopup.target = self
         refreshPopup.action = #selector(refreshIntervalChanged)
         contentView.addSubview(refreshPopup)
+
+        yPosition -= 40
+        let separatorLine4 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
+        separatorLine4.boxType = .separator
+        contentView.addSubview(separatorLine4)
+
+        yPosition -= 30
+        let updatesTitleLabel = NSTextField(labelWithString: "Updates")
+        updatesTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        updatesTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(updatesTitleLabel)
+
+        yPosition -= 30
+        autoUpdateCheckbox = NSButton(checkboxWithTitle: "Check for updates automatically", target: self, action: #selector(autoUpdateChanged))
+        autoUpdateCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        contentView.addSubview(autoUpdateCheckbox)
+
+        yPosition -= 25
+        lastCheckedLabel = NSTextField(labelWithString: "Last checked: \(SettingsHelper.lastUpdateCheckFormatted)")
+        lastCheckedLabel.frame = NSRect(x: 40, y: yPosition, width: 200, height: 20)
+        lastCheckedLabel.font = NSFont.systemFont(ofSize: 11)
+        lastCheckedLabel.textColor = .secondaryLabelColor
+        contentView.addSubview(lastCheckedLabel)
+
+        yPosition -= 25
+        checkNowButton = NSButton(title: "Check for Updates", target: self, action: #selector(checkForUpdatesNow))
+        checkNowButton.frame = NSRect(x: 40, y: yPosition, width: 150, height: 24)
+        checkNowButton.bezelStyle = .rounded
+        contentView.addSubview(checkNowButton)
     }
 
     private func loadExistingAPIKey() {
@@ -203,6 +235,7 @@ class PreferencesWindow: NSWindowController {
         showResetCheckbox.state = SettingsHelper.showResetTime ? .on : .off
         showIndicatorCheckbox.state = SettingsHelper.showIndicator ? .on : .off
         launchAtLoginCheckbox.state = SettingsHelper.launchAtLogin ? .on : .off
+        autoUpdateCheckbox.state = SettingsHelper.autoUpdateEnabled ? .on : .off
     }
 
     @objc private func displayModeChanged(_ sender: NSButton) {
@@ -255,6 +288,23 @@ class PreferencesWindow: NSWindowController {
                 statusLabel.textColor = .systemRed
             }
         }
+    }
+
+    @objc private func autoUpdateChanged(_ sender: NSButton) {
+        let enabled = sender.state == .on
+        SettingsHelper.autoUpdateEnabled = enabled
+
+        if enabled {
+            NotificationCenter.default.post(name: .enableAutoUpdate, object: nil)
+        } else {
+            NotificationCenter.default.post(name: .disableAutoUpdate, object: nil)
+        }
+    }
+
+    @objc private func checkForUpdatesNow() {
+        NotificationCenter.default.post(name: .checkForUpdates, object: nil)
+        SettingsHelper.lastUpdateCheck = Date()
+        lastCheckedLabel.stringValue = "Last checked: Just now"
     }
 
     @objc private func refreshIntervalChanged() {
