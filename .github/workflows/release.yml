@@ -23,10 +23,27 @@ jobs:
           VERSION=${TAG_NAME#v}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          # Update CFBundleShortVersionString in Info.plist
-          sed -i '' "s/<string>[0-9.]*<\/string>/<string>${VERSION}<\/string>/" MiniMaxUsage/Resources/Info.plist
-          echo "=== Updated Info.plist version to $VERSION ==="
-          grep -A1 "CFBundleShortVersionString" MiniMaxUsage/Resources/Info.plist
+          # Get previous tag to calculate build number
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            BUILD_NUM=1
+          else
+            PREV_BUILD=$(git rev-list --count "$PREV_TAG..HEAD" 2>/dev/null || echo "1")
+            BUILD_NUM=$((PREV_BUILD + 1))
+          fi
+          echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
+
+          # Update CFBundleShortVersionString (display version)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" MiniMaxUsage/Resources/Info.plist
+
+          # Update CFBundleVersion (comparison version - must be numeric and incrementing)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" MiniMaxUsage/Resources/Info.plist
+
+          echo "=== Updated Info.plist ==="
+          echo "CFBundleShortVersionString: $VERSION"
+          echo "CFBundleVersion: $BUILD_NUM"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" MiniMaxUsage/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" MiniMaxUsage/Resources/Info.plist
 
       - name: Install XcodeGen
         run: brew install xcodegen
