@@ -59,7 +59,7 @@ jobs:
           # Create new release with DMG and release notes
           gh release create "v${VERSION}" \
             --title "MiniMaxUsage v${VERSION}" \
-            --notes release_notes.md \
+            --notes-file release_notes.md \
             --repo ${{ github.repository }} \
             --latest \
             ./MiniMaxUsage.dmg
