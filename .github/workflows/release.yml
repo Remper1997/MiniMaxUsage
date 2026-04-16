@@ -64,18 +64,15 @@ jobs:
             sed -i '' 's|</channel>|'"${NEW_ITEM}"'\n</channel>|' appcast.xml
           else
             # Create new appcast.xml
-            cat > appcast.xml << 'APPCAST'
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>MiniMaxUsage Updates</title>
-    <link>https://github.com/Remper1997/MiniMaxUsage/releases</link>
-    <description>MiniMaxUsage update feed</description>
-    <language>en</language>
-APPCAST
-            echo "${NEW_ITEM}" >> appcast.xml
-            echo "  </channel>" >> appcast.xml
-            echo "</rss>" >> appcast.xml
+            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+              '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' \
+              '  <channel>' \
+              '    <title>MiniMaxUsage Updates</title>' \
+              '    <link>https://github.com/Remper1997/MiniMaxUsage/releases</link>' \
+              '    <description>MiniMaxUsage update feed</description>' \
+              '    <language>en</language>' > appcast.xml
+            printf '%s\n' "${NEW_ITEM}" >> appcast.xml
+            printf '%s\n' '  </channel>' '</rss>' >> appcast.xml
           fi
 
           echo "=== Updated appcast.xml ==="
