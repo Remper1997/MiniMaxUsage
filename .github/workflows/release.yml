@@ -36,44 +36,39 @@ jobs:
           fi
           echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
 
-          # Get previous tag (second most recent)
-          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
-
-          # Generate release notes
-          echo "## MiniMaxUsage v${VERSION}" > release_notes.md
-          echo "" >> release_notes.md
-          echo "Automated release built by GitHub Actions." >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Changes in this release:" >> release_notes.md
-
+          # Build release notes from git log
           if [ -z "$PREV_TAG" ]; then
-            git log --oneline -20 >> release_notes.md
+            CHANGELOG=$(git log --oneline -20)
           else
-            git log --oneline "$PREV_TAG..HEAD" >> release_notes.md
+            CHANGELOG=$(git log --oneline "$PREV_TAG..HEAD")
           fi
 
-          # Create new appcast item XML
           RELEASE_DATE=$(date -u +"%a, %d %b %Y %H:%M:%S +0000")
           DMG_URL="https://github.com/Remper1997/MiniMaxUsage/releases/download/v${VERSION}/MiniMaxUsage.dmg"
 
-          NEW_ITEM="  <item>\n    <title>Version ${VERSION}</title>\n    <sparkle:version>${BUILD_NUM}</sparkle:version>\n    <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>\n    <description><![CDATA[\n$(cat release_notes.md)\n    ]]></description>\n    <pubDate>${RELEASE_DATE}</pubDate>\n    <enclosure url=\"${DMG_URL}\" sparkle:version=\"${BUILD_NUM}\" sparkle:shortVersionString=\"${VERSION}\" type=\"application/octet-stream\" />\n  </item>"
-
-          # Update appcast.xml - insert new item after channel opening tags
-          if [ -f appcast.xml ]; then
-            # Remove closing tags, insert new item, add closing tags
-            sed -i '' 's|</channel>|'"${NEW_ITEM}"'\n</channel>|' appcast.xml
-          else
-            # Create new appcast.xml
-            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
-              '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' \
-              '  <channel>' \
-              '    <title>MiniMaxUsage Updates</title>' \
-              '    <link>https://github.com/Remper1997/MiniMaxUsage/releases</link>' \
-              '    <description>MiniMaxUsage update feed</description>' \
-              '    <language>en</language>' > appcast.xml
-            printf '%s\n' "${NEW_ITEM}" >> appcast.xml
-            printf '%s\n' '  </channel>' '</rss>' >> appcast.xml
-          fi
+          # Write complete appcast.xml from scratch using printf
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n' > appcast.xml
+          printf '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">\n' >> appcast.xml
+          printf '  <channel>\n' >> appcast.xml
+          printf '    <title>MiniMaxUsage Updates</title>\n' >> appcast.xml
+          printf '    <link>https://github.com/Remper1997/MiniMaxUsage/releases</link>\n' >> appcast.xml
+          printf '    <description>MiniMaxUsage update feed</description>\n' >> appcast.xml
+          printf '    <language>en</language>\n' >> appcast.xml
+          printf '  <item>\n' >> appcast.xml
+          printf '    <title>Version %s</title>\n' "$VERSION" >> appcast.xml
+          printf '    <sparkle:version>%s</sparkle:version>\n' "$BUILD_NUM" >> appcast.xml
+          printf '    <sparkle:shortVersionString>%s</sparkle:shortVersionString>\n' "$VERSION" >> appcast.xml
+          printf '    <description><![CDATA[\n' >> appcast.xml
+          printf '## MiniMaxUsage v%s\n\n' "$VERSION" >> appcast.xml
+          printf 'Automated release built by GitHub Actions.\n\n' >> appcast.xml
+          printf '### Changes in this release:\n' >> appcast.xml
+          printf '%s\n' "$CHANGELOG" >> appcast.xml
+          printf '    ]]></description>\n' >> appcast.xml
+          printf '    <pubDate>%s</pubDate>\n' "$RELEASE_DATE" >> appcast.xml
+          printf '    <enclosure url="%s" sparkle:version="%s" sparkle:shortVersionString="%s" type="application/octet-stream" />\n' "$DMG_URL" "$BUILD_NUM" "$VERSION" >> appcast.xml
+          printf '  </item>\n' >> appcast.xml
+          printf '  </channel>\n' >> appcast.xml
+          printf '</rss>\n' >> appcast.xml
 
           echo "=== Updated appcast.xml ==="
           cat appcast.xml
