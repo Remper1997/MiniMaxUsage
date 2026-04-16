@@ -12,6 +12,7 @@ class SettingsHelper {
     private static let showPercentKey = "showPercent"
     private static let showRequestsKey = "showRequests"
     private static let showResetTimeKey = "showResetTime"
+    private static let launchAtLoginKey = "launchAtLogin"
 
     // Daily tracking UserDefaults keys
     private static let dailyLastRecordedDateKey = "dailyLastRecordedDate"
@@ -74,6 +75,16 @@ class SettingsHelper {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: showResetTimeKey)
+            NotificationCenter.default.post(name: .settingsChanged, object: nil)
+        }
+    }
+
+    static var launchAtLogin: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: launchAtLoginKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: launchAtLoginKey)
             NotificationCenter.default.post(name: .settingsChanged, object: nil)
         }
     }

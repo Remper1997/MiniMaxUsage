@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 
 class PreferencesWindow: NSWindowController {
     private var apiService: ApiService
@@ -12,6 +13,7 @@ class PreferencesWindow: NSWindowController {
     private var showPercentCheckbox: NSButton!
     private var showRequestsCheckbox: NSButton!
     private var showResetCheckbox: NSButton!
+    private var launchAtLoginCheckbox: NSButton!
 
     private let refreshOptions: [(String, TimeInterval)] = [
         ("30 seconds", 30),
@@ -147,6 +149,22 @@ class PreferencesWindow: NSWindowController {
         contentView.addSubview(separatorLine2)
 
         yPosition -= 30
+        let launchAtLoginTitleLabel = NSTextField(labelWithString: "Startup")
+        launchAtLoginTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        launchAtLoginTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(launchAtLoginTitleLabel)
+
+        yPosition -= 30
+        launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Apri MiniMaxUsage all'accesso", target: self, action: #selector(launchAtLoginChanged))
+        launchAtLoginCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        contentView.addSubview(launchAtLoginCheckbox)
+
+        yPosition -= 40
+        let separatorLine3 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
+        separatorLine3.boxType = .separator
+        contentView.addSubview(separatorLine3)
+
+        yPosition -= 30
         let refreshTitleLabel = NSTextField(labelWithString: "Refresh Interval")
         refreshTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
         refreshTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
@@ -184,6 +202,7 @@ class PreferencesWindow: NSWindowController {
         showRequestsCheckbox.state = SettingsHelper.showRequests ? .on : .off
         showResetCheckbox.state = SettingsHelper.showResetTime ? .on : .off
         showIndicatorCheckbox.state = SettingsHelper.showIndicator ? .on : .off
+        launchAtLoginCheckbox.state = SettingsHelper.launchAtLogin ? .on : .off
     }
 
     @objc private func displayModeChanged(_ sender: NSButton) {
@@ -203,6 +222,32 @@ class PreferencesWindow: NSWindowController {
 
     @objc private func showIndicatorChanged() {
         SettingsHelper.showIndicator = showIndicatorCheckbox.state == .on
+    }
+
+    @objc private func launchAtLoginChanged(_ sender: NSButton) {
+        let enable = sender.state == .on
+        SettingsHelper.launchAtLogin = enable
+
+        if enable {
+            do {
+                try SMAppService.mainApp.register()
+            } catch {
+                // If registration fails (e.g., requires approval), update checkbox to match actual state
+                let actualStatus = SMAppService.mainApp.status
+                if actualStatus != .enabled {
+                    sender.state = .off
+                    SettingsHelper.launchAtLogin = false
+                }
+            }
+        } else {
+            do {
+                try SMAppService.mainApp.unregister()
+            } catch {
+                // If unregistration fails, restore checkbox
+                sender.state = .on
+                SettingsHelper.launchAtLogin = true
+            }
+        }
     }
 
     @objc private func refreshIntervalChanged() {
