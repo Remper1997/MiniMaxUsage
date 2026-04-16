@@ -15,9 +15,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      - name: Set version from tag
+      - name: Update appcast.xml
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
           VERSION=${TAG_NAME#v}
@@ -33,6 +36,65 @@ jobs:
           fi
           echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
 
+          # Get previous tag (second most recent)
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+
+          # Generate release notes
+          echo "## MiniMaxUsage v${VERSION}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "Automated release built by GitHub Actions." >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Changes in this release:" >> release_notes.md
+
+          if [ -z "$PREV_TAG" ]; then
+            git log --oneline -20 >> release_notes.md
+          else
+            git log --oneline "$PREV_TAG..HEAD" >> release_notes.md
+          fi
+
+          # Create new appcast item XML
+          RELEASE_DATE=$(date -u +"%a, %d %b %Y %H:%M:%S +0000")
+          DMG_URL="https://github.com/Remper1997/MiniMaxUsage/releases/download/v${VERSION}/MiniMaxUsage.dmg"
+
+          NEW_ITEM="  <item>\n    <title>Version ${VERSION}</title>\n    <sparkle:version>${BUILD_NUM}</sparkle:version>\n    <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>\n    <description><![CDATA[\n$(cat release_notes.md)\n    ]]></description>\n    <pubDate>${RELEASE_DATE}</pubDate>\n    <enclosure url=\"${DMG_URL}\" sparkle:version=\"${BUILD_NUM}\" sparkle:shortVersionString=\"${VERSION}\" type=\"application/octet-stream\" />\n  </item>"
+
+          # Update appcast.xml - insert new item after channel opening tags
+          if [ -f appcast.xml ]; then
+            # Remove closing tags, insert new item, add closing tags
+            sed -i '' 's|</channel>|'"${NEW_ITEM}"'\n</channel>|' appcast.xml
+          else
+            # Create new appcast.xml
+            cat > appcast.xml << 'APPCAST'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>MiniMaxUsage Updates</title>
+    <link>https://github.com/Remper1997/MiniMaxUsage/releases</link>
+    <description>MiniMaxUsage update feed</description>
+    <language>en</language>
+APPCAST
+            echo "${NEW_ITEM}" >> appcast.xml
+            echo "  </channel>" >> appcast.xml
+            echo "</rss>" >> appcast.xml
+          fi
+
+          echo "=== Updated appcast.xml ==="
+          cat appcast.xml
+
+          # Commit and push appcast.xml to main branch
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git commit -m "Update appcast.xml for v${VERSION}"
+          git push origin main
+
+      - name: Set version from tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION=${TAG_NAME#v}
+          BUILD_NUM=${{ env.BUILD_NUM }}
+
           # Update CFBundleShortVersionString (display version)
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" MiniMaxUsage/Resources/Info.plist
 
@@ -42,8 +104,6 @@ jobs:
           echo "=== Updated Info.plist ==="
           echo "CFBundleShortVersionString: $VERSION"
           echo "CFBundleVersion: $BUILD_NUM"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" MiniMaxUsage/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" MiniMaxUsage/Resources/Info.plist
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -75,19 +135,14 @@ jobs:
             echo "No certificate configured, skipping sign"
             exit 0
           fi
-          # Create temporary keychain
           KEYCHAIN_PATH=/tmp/sign.keychain-db
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate
           echo -n "$CERTIFICATE_DEV_ID" | base64 --decode -o cert.p12
           security import cert.p12 -P "" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple:,sign: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychains -d user -s $KEYCHAIN_PATH
-
-          # Debug: list identities
           echo "=== Available identities ==="
           security find-identity -v -p codesigning $KEYCHAIN_PATH
           rm cert.p12
@@ -103,33 +158,19 @@ jobs:
           codesign -s "$APP_SIGNING_IDENTITY" --force --deep MiniMaxUsage.dmg
           codesign -dv MiniMaxUsage.dmg
 
-      - name: Upload DMG to release
+      - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          # Get version without 'v' prefix for title
           VERSION=${TAG_NAME#v}
 
-          # Get previous tag (second most recent)
-          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
-
-          # Generate release notes
+          # Create release notes
           echo "## MiniMaxUsage v${VERSION}" > release_notes.md
           echo "" >> release_notes.md
           echo "Automated release built by GitHub Actions." >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Changes in this release:" >> release_notes.md
 
-          if [ -z "$PREV_TAG" ]; then
-            # No previous tag, show all commits
-            git log --oneline -20 >> release_notes.md
-          else
-            # Show commits since last release
-            git log --oneline "$PREV_TAG..HEAD" >> release_notes.md
-          fi
-
-          # Create new release with DMG and release notes
+          # Create release with DMG
           gh release create "v${VERSION}" \
             --title "MiniMaxUsage v${VERSION}" \
             --notes-file release_notes.md \

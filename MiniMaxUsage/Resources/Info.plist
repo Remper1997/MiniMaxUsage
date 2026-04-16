@@ -29,6 +29,6 @@
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>SUFeedURL</key>
-    <string>https://github.com/Remper1997/MiniMaxUsage/releases.atom</string>
+    <string>https://raw.githubusercontent.com/Remper1997/MiniMaxUsage/main/appcast.xml</string>
 </dict>
 </plist>
