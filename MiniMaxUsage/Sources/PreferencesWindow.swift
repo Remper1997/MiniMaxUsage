@@ -38,11 +38,15 @@ class PreferencesWindow: NSWindowController {
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
 
-        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 560))
+        // Content height: UI builds from bottom (y=20) to top
+        // Final element (apiTitleLabel) ends at y=705
+        let contentViewHeight: CGFloat = 710
+
+        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: contentViewHeight))
         scrollView.documentView = contentView
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 450, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 480),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
@@ -50,7 +54,7 @@ class PreferencesWindow: NSWindowController {
         window.title = "MiniMaxUsage Preferences"
         window.contentView = scrollView
         window.center()
-        window.minSize = NSSize(width: 450, height: 300)
+        window.minSize = NSSize(width: 450, height: 400)
 
         super.init(window: window)
 
@@ -68,25 +72,124 @@ class PreferencesWindow: NSWindowController {
         guard let scrollView = window?.contentView as? NSScrollView,
               let contentView = scrollView.documentView else { return }
 
-        var yPosition = 440
+        // Build UI from bottom to top using positive coordinates
+        var yPosition: CGFloat = 20
 
-        let apiTitleLabel = NSTextField(labelWithString: "MiniMax API Key")
-        apiTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
-        apiTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
-        contentView.addSubview(apiTitleLabel)
+        // === Updates Section (bottom) ===
+        checkNowButton = NSButton(title: "Check for Updates", target: self, action: #selector(checkForUpdatesNow))
+        checkNowButton.frame = NSRect(x: 40, y: yPosition, width: 150, height: 24)
+        checkNowButton.bezelStyle = .rounded
+        contentView.addSubview(checkNowButton)
 
-        yPosition -= 30
-        apiKeyField = NSSecureTextField(frame: NSRect(x: 20, y: yPosition, width: 410, height: 24))
-        apiKeyField.placeholderString = "sk-cp-..."
-        contentView.addSubview(apiKeyField)
+        yPosition += 25
+        lastCheckedLabel = NSTextField(labelWithString: "Last checked: \(SettingsHelper.lastUpdateCheckFormatted)")
+        lastCheckedLabel.frame = NSRect(x: 40, y: yPosition, width: 200, height: 20)
+        lastCheckedLabel.font = NSFont.systemFont(ofSize: 11)
+        lastCheckedLabel.textColor = .secondaryLabelColor
+        contentView.addSubview(lastCheckedLabel)
 
-        yPosition -= 30
-        statusLabel = NSTextField(labelWithString: "")
-        statusLabel.frame = NSRect(x: 20, y: yPosition, width: 410, height: 20)
-        statusLabel.font = NSFont.systemFont(ofSize: 11)
-        contentView.addSubview(statusLabel)
+        yPosition += 25
+        autoUpdateCheckbox = NSButton(checkboxWithTitle: "Check for updates automatically", target: self, action: #selector(autoUpdateChanged))
+        autoUpdateCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        contentView.addSubview(autoUpdateCheckbox)
 
-        yPosition -= 35
+        yPosition += 30
+        let updatesTitleLabel = NSTextField(labelWithString: "Updates")
+        updatesTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        updatesTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(updatesTitleLabel)
+
+        yPosition += 40
+        let separatorLine4 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
+        separatorLine4.boxType = .separator
+        contentView.addSubview(separatorLine4)
+
+        yPosition += 30
+        refreshPopup = NSPopUpButton(frame: NSRect(x: 20, y: yPosition, width: 200, height: 25))
+        for (title, _) in refreshOptions {
+            refreshPopup.addItem(withTitle: title)
+        }
+        refreshPopup.target = self
+        refreshPopup.action = #selector(refreshIntervalChanged)
+        contentView.addSubview(refreshPopup)
+
+        yPosition += 30
+        let refreshTitleLabel = NSTextField(labelWithString: "Refresh Interval")
+        refreshTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        refreshTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(refreshTitleLabel)
+
+        yPosition += 40
+        let separatorLine3 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
+        separatorLine3.boxType = .separator
+        contentView.addSubview(separatorLine3)
+
+        yPosition += 30
+        launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Apri MiniMaxUsage all'accesso", target: self, action: #selector(launchAtLoginChanged))
+        launchAtLoginCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        contentView.addSubview(launchAtLoginCheckbox)
+
+        yPosition += 30
+        let launchAtLoginTitleLabel = NSTextField(labelWithString: "Startup")
+        launchAtLoginTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        launchAtLoginTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(launchAtLoginTitleLabel)
+
+        yPosition += 40
+        let separatorLine2 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
+        separatorLine2.boxType = .separator
+        contentView.addSubview(separatorLine2)
+
+        yPosition += 30
+        showIndicatorCheckbox = NSButton(checkboxWithTitle: "Show color indicator (🟢🟡🔴)", target: self, action: #selector(showIndicatorChanged))
+        showIndicatorCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        contentView.addSubview(showIndicatorCheckbox)
+
+        yPosition += 30
+        showResetCheckbox = NSButton(checkboxWithTitle: "Reset time", target: self, action: #selector(displayModeChanged))
+        showResetCheckbox.frame = NSRect(x: 40, y: yPosition, width: 150, height: 20)
+        showResetCheckbox.tag = 3
+        contentView.addSubview(showResetCheckbox)
+
+        yPosition += 25
+        showRequestsCheckbox = NSButton(checkboxWithTitle: "Requests (used/total)", target: self, action: #selector(displayModeChanged))
+        showRequestsCheckbox.frame = NSRect(x: 200, y: yPosition, width: 180, height: 20)
+        showRequestsCheckbox.tag = 2
+        contentView.addSubview(showRequestsCheckbox)
+
+        showPercentCheckbox = NSButton(checkboxWithTitle: "Percentage (%)", target: self, action: #selector(displayModeChanged))
+        showPercentCheckbox.frame = NSRect(x: 40, y: yPosition, width: 150, height: 20)
+        showPercentCheckbox.tag = 1
+        contentView.addSubview(showPercentCheckbox)
+
+        yPosition += 25
+        let showLabel = NSTextField(labelWithString: "Show in menu bar:")
+        showLabel.frame = NSRect(x: 20, y: yPosition, width: 120, height: 20)
+        contentView.addSubview(showLabel)
+
+        yPosition += 30
+        quotaTypePopup = NSPopUpButton(frame: NSRect(x: 150, y: yPosition - 2, width: 200, height: 25))
+        quotaTypePopup.addItems(withTitles: ["5-hour window", "Weekly", "Daily"])
+        quotaTypePopup.target = self
+        quotaTypePopup.action = #selector(quotaTypeChanged)
+        contentView.addSubview(quotaTypePopup)
+
+        let quotaTypeLabel = NSTextField(labelWithString: "Quota type:")
+        quotaTypeLabel.frame = NSRect(x: 20, y: yPosition, width: 120, height: 20)
+        contentView.addSubview(quotaTypeLabel)
+
+        yPosition += 40
+        let displayTitleLabel = NSTextField(labelWithString: "Display Settings")
+        displayTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        displayTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(displayTitleLabel)
+
+        yPosition += 40
+        let separatorLine = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
+        separatorLine.boxType = .separator
+        contentView.addSubview(separatorLine)
+
+        yPosition += 35
         saveButton = NSButton(title: "Save & Test", target: self, action: #selector(saveAndTest))
         saveButton.frame = NSRect(x: 20, y: yPosition, width: 120, height: 30)
         saveButton.bezelStyle = .rounded
@@ -97,119 +200,22 @@ class PreferencesWindow: NSWindowController {
         deleteButton.bezelStyle = .rounded
         contentView.addSubview(deleteButton)
 
-        yPosition -= 40
-        let separatorLine = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
-        separatorLine.boxType = .separator
-        contentView.addSubview(separatorLine)
+        yPosition += 30
+        statusLabel = NSTextField(labelWithString: "")
+        statusLabel.frame = NSRect(x: 20, y: yPosition, width: 410, height: 20)
+        statusLabel.font = NSFont.systemFont(ofSize: 11)
+        contentView.addSubview(statusLabel)
 
-        yPosition -= 30
-        let displayTitleLabel = NSTextField(labelWithString: "Display Settings")
-        displayTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
-        displayTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
-        contentView.addSubview(displayTitleLabel)
+        yPosition += 30
+        apiKeyField = NSSecureTextField(frame: NSRect(x: 20, y: yPosition, width: 410, height: 24))
+        apiKeyField.placeholderString = "sk-cp-..."
+        contentView.addSubview(apiKeyField)
 
-        yPosition -= 30
-        let quotaTypeLabel = NSTextField(labelWithString: "Quota type:")
-        quotaTypeLabel.frame = NSRect(x: 20, y: yPosition, width: 120, height: 20)
-        contentView.addSubview(quotaTypeLabel)
-
-        quotaTypePopup = NSPopUpButton(frame: NSRect(x: 150, y: yPosition - 2, width: 200, height: 25))
-        quotaTypePopup.addItems(withTitles: ["5-hour window", "Weekly", "Daily"])
-        quotaTypePopup.target = self
-        quotaTypePopup.action = #selector(quotaTypeChanged)
-        contentView.addSubview(quotaTypePopup)
-
-        yPosition -= 30
-        let showLabel = NSTextField(labelWithString: "Show in menu bar:")
-        showLabel.frame = NSRect(x: 20, y: yPosition, width: 120, height: 20)
-        contentView.addSubview(showLabel)
-
-        yPosition -= 25
-        showPercentCheckbox = NSButton(checkboxWithTitle: "Percentage (%)", target: self, action: #selector(displayModeChanged))
-        showPercentCheckbox.frame = NSRect(x: 40, y: yPosition, width: 150, height: 20)
-        showPercentCheckbox.tag = 1
-        contentView.addSubview(showPercentCheckbox)
-
-        showRequestsCheckbox = NSButton(checkboxWithTitle: "Requests (used/total)", target: self, action: #selector(displayModeChanged))
-        showRequestsCheckbox.frame = NSRect(x: 200, y: yPosition, width: 180, height: 20)
-        showRequestsCheckbox.tag = 2
-        contentView.addSubview(showRequestsCheckbox)
-
-        yPosition -= 25
-        showResetCheckbox = NSButton(checkboxWithTitle: "Reset time", target: self, action: #selector(displayModeChanged))
-        showResetCheckbox.frame = NSRect(x: 40, y: yPosition, width: 150, height: 20)
-        showResetCheckbox.tag = 3
-        contentView.addSubview(showResetCheckbox)
-
-        yPosition -= 30
-        showIndicatorCheckbox = NSButton(checkboxWithTitle: "Show color indicator (🟢🟡🔴)", target: self, action: #selector(showIndicatorChanged))
-        showIndicatorCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
-        contentView.addSubview(showIndicatorCheckbox)
-
-        yPosition -= 40
-        let separatorLine2 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
-        separatorLine2.boxType = .separator
-        contentView.addSubview(separatorLine2)
-
-        yPosition -= 30
-        let launchAtLoginTitleLabel = NSTextField(labelWithString: "Startup")
-        launchAtLoginTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
-        launchAtLoginTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
-        contentView.addSubview(launchAtLoginTitleLabel)
-
-        yPosition -= 30
-        launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Apri MiniMaxUsage all'accesso", target: self, action: #selector(launchAtLoginChanged))
-        launchAtLoginCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
-        contentView.addSubview(launchAtLoginCheckbox)
-
-        yPosition -= 40
-        let separatorLine3 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
-        separatorLine3.boxType = .separator
-        contentView.addSubview(separatorLine3)
-
-        yPosition -= 30
-        let refreshTitleLabel = NSTextField(labelWithString: "Refresh Interval")
-        refreshTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
-        refreshTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
-        contentView.addSubview(refreshTitleLabel)
-
-        yPosition -= 30
-        refreshPopup = NSPopUpButton(frame: NSRect(x: 20, y: yPosition, width: 200, height: 25))
-        for (title, _) in refreshOptions {
-            refreshPopup.addItem(withTitle: title)
-        }
-        refreshPopup.target = self
-        refreshPopup.action = #selector(refreshIntervalChanged)
-        contentView.addSubview(refreshPopup)
-
-        yPosition -= 40
-        let separatorLine4 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
-        separatorLine4.boxType = .separator
-        contentView.addSubview(separatorLine4)
-
-        yPosition -= 30
-        let updatesTitleLabel = NSTextField(labelWithString: "Updates")
-        updatesTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
-        updatesTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
-        contentView.addSubview(updatesTitleLabel)
-
-        yPosition -= 30
-        autoUpdateCheckbox = NSButton(checkboxWithTitle: "Check for updates automatically", target: self, action: #selector(autoUpdateChanged))
-        autoUpdateCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
-        contentView.addSubview(autoUpdateCheckbox)
-
-        yPosition -= 25
-        lastCheckedLabel = NSTextField(labelWithString: "Last checked: \(SettingsHelper.lastUpdateCheckFormatted)")
-        lastCheckedLabel.frame = NSRect(x: 40, y: yPosition, width: 200, height: 20)
-        lastCheckedLabel.font = NSFont.systemFont(ofSize: 11)
-        lastCheckedLabel.textColor = .secondaryLabelColor
-        contentView.addSubview(lastCheckedLabel)
-
-        yPosition -= 25
-        checkNowButton = NSButton(title: "Check for Updates", target: self, action: #selector(checkForUpdatesNow))
-        checkNowButton.frame = NSRect(x: 40, y: yPosition, width: 150, height: 24)
-        checkNowButton.bezelStyle = .rounded
-        contentView.addSubview(checkNowButton)
+        yPosition += 30
+        let apiTitleLabel = NSTextField(labelWithString: "MiniMax API Key")
+        apiTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        apiTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(apiTitleLabel)
     }
 
     private func loadExistingAPIKey() {

@@ -50,6 +50,12 @@ class MenuBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        let checkUpdatesItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: "")
+        checkUpdatesItem.target = self
+        menu.addItem(checkUpdatesItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(title: "Quit MiniMaxUsage", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
@@ -299,6 +305,10 @@ class MenuBarController: NSObject {
 
     @objc private func openPreferences() {
         NotificationCenter.default.post(name: .showPreferences, object: nil)
+    }
+
+    @objc private func checkForUpdates() {
+        NotificationCenter.default.post(name: .checkForUpdates, object: nil)
     }
 
     @objc func quitApp() {
