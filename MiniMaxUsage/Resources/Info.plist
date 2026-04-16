@@ -28,5 +28,7 @@
     <string>Copyright © 2025. All rights reserved.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/Remper1997/MiniMaxUsage/releases/feed.xml</string>
 </dict>
 </plist>
