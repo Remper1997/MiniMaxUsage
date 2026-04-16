@@ -37,6 +37,32 @@ jobs:
           ln -s /Applications dmg_root/Applications
           hdiutil create MiniMaxUsage.dmg -volname "MiniMaxUsage" -srcfolder dmg_root -ov -format UDZO
 
+      - name: Import Code Signing Certificate
+        if: vars.CERTIFICATE_DEV_ID != ''
+        env:
+          CERTIFICATE_DEV_ID: ${{ secrets.CERTIFICATE_DEV_ID }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=/tmp/sign.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          echo -n "$CERTIFICATE_DEV_ID" | base64 --decode -o cert.p12
+          security import cert.p12 -P "" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-smartcards $KEYCHAIN_PATH
+          rm cert.p12
+
+      - name: Sign DMG
+        if: vars.CERTIFICATE_DEV_ID != ''
+        env:
+          APP_SIGNING_IDENTITY: ${{ secrets.APP_SIGNING_IDENTITY }}
+        run: |
+          codesign -s "$APP_SIGNING_IDENTITY" --force --deep MiniMaxUsage.dmg
+          codesign -dv MiniMaxUsage.dmg
+
       - name: Upload DMG to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,13 +71,23 @@ jobs:
           # Get version without 'v' prefix for title
           VERSION=${TAG_NAME#v}
 
+          # Get previous tag (second most recent)
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+
           # Generate release notes
           echo "## MiniMaxUsage v${VERSION}" > release_notes.md
           echo "" >> release_notes.md
           echo "Automated release built by GitHub Actions." >> release_notes.md
           echo "" >> release_notes.md
           echo "### Changes in this release:" >> release_notes.md
-          git log --oneline -10 >> release_notes.md
+
+          if [ -z "$PREV_TAG" ]; then
+            # No previous tag, show all commits
+            git log --oneline -20 >> release_notes.md
+          else
+            # Show commits since last release
+            git log --oneline "$PREV_TAG..HEAD" >> release_notes.md
+          fi
 
           # Create new release with DMG and release notes
           gh release create "v${VERSION}" \
