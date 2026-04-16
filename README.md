@@ -46,22 +46,14 @@ Configurable refresh interval from 30 seconds to 30 minutes.
 
 ## Installation
 
-### Option 1: Homebrew (Recommended)
-
-```bash
-brew install --cask minimaxusage
-```
-
-> Note: If the Homebrew formula isn't available yet, you can install via Option 2.
-
-### Option 2: Download Release
+### Option 1: Download Release (Recommended)
 
 1. Go to the [Releases page](https://github.com/Remper1997/MiniMaxUsage/releases)
 2. Download the latest `.dmg` file
 3. Open the DMG and drag **MiniMaxUsage.app** to your Applications folder
 4. Launch MiniMaxUsage from Applications
 
-### Option 3: Build from Source
+### Option 2: Build from Source
 
 ```bash
 # Clone the repository
@@ -79,6 +71,8 @@ open MiniMaxUsage.xcodeproj
 - macOS 14.0 or later
 - Xcode 15.0 or later
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
+
+> **Note:** Homebrew installation will be available in a future release.
 
 ## Setup
 
@@ -137,9 +131,6 @@ The daily budget is calculated once at the start of each day and remains fixed f
 ## Uninstall
 
 ```bash
-# If installed via Homebrew
-brew uninstall --cask minimaxusage
-
 # Remove from Applications
 rm -rf /Applications/MiniMaxUsage.app
 
