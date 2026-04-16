@@ -42,10 +42,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Delete existing release if exists (force recreate)
-          if gh release view v${{ github.ref_name }} --repo ${{ github.repository }} 2>/dev/null; then
-            echo "Deleting existing release..."
-            gh release delete v${{ github.ref_name }} --yes --repo ${{ github.repository }}
-          fi
-          # Create new release with DMG
-          gh release create v${{ github.ref_name }} --title "Release ${{ github.ref_name }}" --notes "Automatic release built by GitHub Actions" --repo ${{ github.repository }} ./MiniMaxUsage.dmg
+          # Generate release notes from commits
+          RELEASE_NOTES="## MiniMaxUsage v${{ github.ref_name }}
+
+Automated release built by GitHub Actions.
+
+### Changes in this release:
+$(git log --oneline -10)
+"
+
+          # Create new release with DMG and release notes
+          gh release create v${{ github.ref_name }} \
+            --title "MiniMaxUsage v${{ github.ref_name }}" \
+            --notes "$RELEASE_NOTES" \
+            --repo ${{ github.repository }} \
+            --latest \
+            ./MiniMaxUsage.dmg
