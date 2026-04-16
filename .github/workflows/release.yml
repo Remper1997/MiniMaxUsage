@@ -36,7 +36,13 @@ jobs:
           hdiutil create MiniMaxUsage.dmg -volname "MiniMaxUsage" -srcfolder dmg_root -ov -format UDZO
 
       - name: Upload DMG to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: MiniMaxUsage.dmg
-          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete existing release if exists (force recreate)
+          if gh release view v${{ github.ref_name }} --repo ${{ github.repository }} 2>/dev/null; then
+            echo "Deleting existing release..."
+            gh release delete v${{ github.ref_name }} --yes --repo ${{ github.repository }}
+          fi
+          # Create new release with DMG
+          gh release create v${{ github.ref_name }} --title "Release ${{ github.ref_name }}" --notes "Automatic release built by GitHub Actions" --repo ${{ github.repository }} ./MiniMaxUsage.dmg
