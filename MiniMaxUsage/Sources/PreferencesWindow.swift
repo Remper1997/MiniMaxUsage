@@ -42,7 +42,7 @@ class PreferencesWindow: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "MacAiUse Preferences"
+        window.title = "MiniMaxUsage Preferences"
         window.contentView = scrollView
         window.center()
         window.minSize = NSSize(width: 450, height: 300)

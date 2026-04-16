@@ -1,4 +1,4 @@
-# MacAiUse
+# MiniMaxUsage
 
 **macOS Menu Bar App for MiniMax API Usage Monitoring**
 
@@ -6,7 +6,7 @@
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-MacAiUse is a lightweight menu bar application that monitors and displays your MiniMax API usage quotas in real-time. It runs silently in your menu bar without a Dock icon, showing your usage statistics at a glance.
+MiniMaxUsage is a lightweight menu bar application that monitors and displays your MiniMax API usage quotas in real-time. It runs silently in your menu bar without a Dock icon, showing your usage statistics at a glance.
 
 ## Features
 
@@ -49,7 +49,7 @@ Configurable refresh interval from 30 seconds to 30 minutes.
 ### Option 1: Homebrew (Recommended)
 
 ```bash
-brew install --cask macaiuse
+brew install --cask minimaxusage
 ```
 
 > Note: If the Homebrew formula isn't available yet, you can install via Option 2.
@@ -58,8 +58,8 @@ brew install --cask macaiuse
 
 1. Go to the [Releases page](https://github.com/Remper1997/MiniMaxUsage/releases)
 2. Download the latest `.dmg` file
-3. Open the DMG and drag **MacAiUse.app** to your Applications folder
-4. Launch MacAiUse from Applications
+3. Open the DMG and drag **MiniMaxUsage.app** to your Applications folder
+4. Launch MiniMaxUsage from Applications
 
 ### Option 3: Build from Source
 
@@ -72,7 +72,7 @@ cd MiniMaxUsage
 xcodegen generate
 
 # Open in Xcode and build
-open MacAiUse.xcodeproj
+open MiniMaxUsage.xcodeproj
 ```
 
 **Requirements for building from source:**
@@ -82,7 +82,7 @@ open MacAiUse.xcodeproj
 
 ## Setup
 
-1. **Launch MacAiUse** from your Applications folder or via Spotlight
+1. **Launch MiniMaxUsage** from your Applications folder or via Spotlight
 2. Click on the menu bar icon and select **Preferences...**
 3. Enter your MiniMax API key (starts with `sk-cp-`)
 4. Click **Save & Test** to verify your key works
@@ -106,7 +106,7 @@ You can customize which elements are shown in Preferences.
 Click the menu bar icon to see:
 - **Refresh**: Manually refresh usage data
 - **Preferences...**: Open settings
-- **Quit MacAiUse**: Exit the app
+- **Quit MiniMaxUsage**: Exit the app
 
 The dropdown also shows the "other" quota types not currently selected as your primary view.
 
@@ -119,16 +119,18 @@ In Preferences, choose which quota type to display:
 
 ## How It Works
 
-MacAiUse polls the MiniMax API endpoint `/coding_plan/remains` at your chosen interval to fetch your current usage statistics.
+MiniMaxUsage polls the MiniMax API endpoint `/coding_plan/remains` at your chosen interval to fetch your current usage statistics.
 
 For the **Daily Budget** feature:
 - Budget = Weekly Remaining ÷ Days Left until reset
 - Today's usage is tracked by comparing your remaining quota at the start of each day vs. now
 - Colors indicate if your daily usage is on track (🟢), warning (🟡), or exceeded (🔴)
 
+The daily budget is calculated once at the start of each day and remains fixed for the entire day.
+
 ## Privacy
 
-- MacAiUse only communicates with MiniMax's API servers
+- MiniMaxUsage only communicates with MiniMax's API servers
 - No usage data is collected or sent elsewhere
 - Your API key is stored only in your local macOS Keychain
 
@@ -136,19 +138,19 @@ For the **Daily Budget** feature:
 
 ```bash
 # If installed via Homebrew
-brew uninstall --cask macaiuse
+brew uninstall --cask minimaxusage
 
 # Remove from Applications
-rm -rf /Applications/MacAiUse.app
+rm -rf /Applications/MiniMaxUsage.app
 
 # Optional: Remove user preferences
-rm -rf ~/Library/Preferences/com.freememory.MacAiUse.plist
-rm -rf ~/Library/Application\ Support/MacAiUse/
+rm -rf ~/Library/Preferences/com.minimaxusage.MiniMaxUsage.plist
+rm -rf ~/Library/Application\ Support/MiniMaxUsage/
 ```
 
 To remove the API key from Keychain:
 ```bash
-security delete-generic-password -s com.freememory.MacAiUse
+security delete-generic-password -s com.minimaxusage.MiniMaxUsage
 ```
 
 ## License

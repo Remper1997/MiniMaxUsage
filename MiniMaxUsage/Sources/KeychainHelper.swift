@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 class KeychainHelper {
-    private static let service = "com.freememory.MacAiUse"
+    private static let service = "com.minimaxusage.MiniMaxUsage"
     private static let account = "MiniMaxAPIKey"
 
     static func saveAPIKey(_ apiKey: String) -> Bool {

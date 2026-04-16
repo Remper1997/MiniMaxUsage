@@ -35,7 +35,7 @@ class MenuBarController: NSObject {
         button.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "MacAiUse", action: nil, keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "MiniMaxUsage", action: nil, keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
 
         let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshData), keyEquivalent: "r")
@@ -50,7 +50,7 @@ class MenuBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit MacAiUse", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit MiniMaxUsage", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
