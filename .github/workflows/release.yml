@@ -16,6 +16,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Set version from tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION=${TAG_NAME#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+          # Update CFBundleShortVersionString in Info.plist
+          sed -i '' "s/<string>[0-9.]*<\/string>/<string>${VERSION}<\/string>/" MiniMaxUsage/Resources/Info.plist
+          echo "=== Updated Info.plist version to $VERSION ==="
+          grep -A1 "CFBundleShortVersionString" MiniMaxUsage/Resources/Info.plist
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
