@@ -1,0 +1,42 @@
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+*.xcuserstate
+*.xcsettings
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM/
+
+# Build artifacts
+build/
+*.app
+*.appex
+*.framework
+*.dylib
+*.pkg
+
+# XcodeGen
+*.xcodeproj/
+!*.xcodeproj/project.pbxproj
+
+# Derived data
+DerivedData/
+*.xcworkspace/
+
+# IDE
+.vscode/
+.idea/
+
+# Swift Package Manager
+.swiftpm/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
