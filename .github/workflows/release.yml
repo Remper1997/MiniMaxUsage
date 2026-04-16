@@ -55,7 +55,7 @@ jobs:
           # Import certificate
           echo -n "$CERTIFICATE_DEV_ID" | base64 --decode -o cert.p12
           security import cert.p12 -P "" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-smartcards $KEYCHAIN_PATH
+          security list-keychains -d user
           rm cert.p12
 
       - name: Sign DMG
