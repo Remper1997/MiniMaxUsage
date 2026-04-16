@@ -232,20 +232,27 @@ class PreferencesWindow: NSWindowController {
             do {
                 try SMAppService.mainApp.register()
             } catch {
-                // If registration fails (e.g., requires approval), update checkbox to match actual state
                 let actualStatus = SMAppService.mainApp.status
-                if actualStatus != .enabled {
+                if actualStatus == .requiresApproval {
                     sender.state = .off
                     SettingsHelper.launchAtLogin = false
+                    statusLabel.stringValue = "Go to System Settings > Login Items to approve"
+                    statusLabel.textColor = .systemOrange
+                } else {
+                    sender.state = .off
+                    SettingsHelper.launchAtLogin = false
+                    statusLabel.stringValue = "Failed to enable launch at login"
+                    statusLabel.textColor = .systemRed
                 }
             }
         } else {
             do {
                 try SMAppService.mainApp.unregister()
             } catch {
-                // If unregistration fails, restore checkbox
                 sender.state = .on
                 SettingsHelper.launchAtLogin = true
+                statusLabel.stringValue = "Failed to disable launch at login"
+                statusLabel.textColor = .systemRed
             }
         }
     }
