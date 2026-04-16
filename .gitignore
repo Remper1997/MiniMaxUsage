@@ -40,3 +40,5 @@ DerivedData/
 # Temporary files
 *.tmp
 *.temp
+# DMG build folder
+dmg_root/
