@@ -38,11 +38,14 @@ jobs:
           hdiutil create MiniMaxUsage.dmg -volname "MiniMaxUsage" -srcfolder dmg_root -ov -format UDZO
 
       - name: Import Code Signing Certificate
-        if: vars.CERTIFICATE_DEV_ID != ''
         env:
           CERTIFICATE_DEV_ID: ${{ secrets.CERTIFICATE_DEV_ID }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          if [ -z "$CERTIFICATE_DEV_ID" ]; then
+            echo "No certificate configured, skipping sign"
+            exit 0
+          fi
           # Create temporary keychain
           KEYCHAIN_PATH=/tmp/sign.keychain-db
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -56,10 +59,13 @@ jobs:
           rm cert.p12
 
       - name: Sign DMG
-        if: vars.CERTIFICATE_DEV_ID != ''
         env:
           APP_SIGNING_IDENTITY: ${{ secrets.APP_SIGNING_IDENTITY }}
         run: |
+          if [ -z "$APP_SIGNING_IDENTITY" ]; then
+            echo "No signing identity configured, skipping sign"
+            exit 0
+          fi
           codesign -s "$APP_SIGNING_IDENTITY" --force --deep MiniMaxUsage.dmg
           codesign -dv MiniMaxUsage.dmg
 
