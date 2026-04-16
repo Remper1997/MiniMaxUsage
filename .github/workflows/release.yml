@@ -55,7 +55,8 @@ jobs:
           # Import certificate
           echo -n "$CERTIFICATE_DEV_ID" | base64 --decode -o cert.p12
           security import cert.p12 -P "" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychains -d user
+          security set-key-partition-list -S apple-tool:,apple:,sign: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
           rm cert.p12
 
       - name: Sign DMG
