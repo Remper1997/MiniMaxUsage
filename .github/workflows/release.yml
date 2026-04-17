@@ -13,10 +13,12 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout main for appcast update
         uses: actions/checkout@v6
         with:
+          ref: main
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Update appcast.xml
         env:
@@ -24,23 +26,22 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           VERSION=${TAG_NAME#v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          # Get previous tag to calculate build number
+          # Get previous tag to calculate build number (from the tag we're building)
           PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
           if [ -z "$PREV_TAG" ]; then
             BUILD_NUM=1
           else
-            PREV_BUILD=$(git rev-list --count "$PREV_TAG..HEAD" 2>/dev/null || echo "1")
+            # Count commits between previous tag and current tag
+            PREV_BUILD=$(git rev-list --count "$PREV_TAG..$TAG_NAME" 2>/dev/null || echo "1")
             BUILD_NUM=$((PREV_BUILD + 1))
           fi
-          echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
 
           # Build release notes from git log
           if [ -z "$PREV_TAG" ]; then
             CHANGELOG=$(git log --oneline -20)
           else
-            CHANGELOG=$(git log --oneline "$PREV_TAG..HEAD")
+            CHANGELOG=$(git log --oneline "$PREV_TAG..$TAG_NAME")
           fi
 
           RELEASE_DATE=$(date -u +"%a, %d %b %Y %H:%M:%S +0000")
@@ -74,19 +75,32 @@ jobs:
           cat appcast.xml
 
           # Commit and push appcast.xml to main branch
-          # Use HEAD:main to push the current commit (even in detached HEAD state) to remote main
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add appcast.xml
           git commit -m "Update appcast.xml for v${VERSION}"
-          git push origin HEAD:refs/heads/main
+          git push origin main
+
+      - name: Checkout tag for build
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set version from tag
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           VERSION=${TAG_NAME#v}
-          BUILD_NUM=${{ env.BUILD_NUM }}
+
+          # Recalculate build number (same formula as appcast step)
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            BUILD_NUM=1
+          else
+            PREV_BUILD=$(git rev-list --count "$PREV_TAG..$TAG_NAME" 2>/dev/null || echo "1")
+            BUILD_NUM=$((PREV_BUILD + 1))
+          fi
 
           # Update CFBundleShortVersionString (display version)
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" MiniMaxUsage/Resources/Info.plist
