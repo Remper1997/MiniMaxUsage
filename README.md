@@ -44,6 +44,19 @@ Your MiniMax API key is stored securely in the macOS Keychain, never in plain te
 
 Configurable refresh interval from 30 seconds to 30 minutes.
 
+## Screenshots
+
+### Menu Bar View
+![Main App](MainApp.png)
+
+### Preferences
+![Preferences](PreferenzeMenu.png)
+
+### Quota Options
+![Quota Options](Quota.png)
+
+---
+
 ## Installation
 
 ### Option 1: Download Release (Recommended)
