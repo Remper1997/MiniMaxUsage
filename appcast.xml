@@ -6,43 +6,16 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 1.5.22</title>
-    <sparkle:version>51</sparkle:version>
-    <sparkle:shortVersionString>1.5.22</sparkle:shortVersionString>
+    <title>Version 1.6.0</title>
+    <sparkle:version>52</sparkle:version>
+    <sparkle:shortVersionString>1.6.0</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v1.5.22
+## MiniMaxUsage v1.6.0
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
-5f9ef2c Fix: Sign DMG with Developer ID before notarization
-2434a02 Update appcast.xml for v1.5.21
-f524227 Fix: Use GITHUB_RUN_NUMBER for monotonically increasing sparkle:version
-dd0a640 Update appcast.xml for v1.5.20
-6f6ed7f Fix: Use correct stapler validate command (not verify)
-cfcb318 Update appcast.xml for v1.5.19
-53d4e67 Fix: Sign binaries in correct order with --deep for containers
-cab87d8 Update appcast.xml for v1.5.18
-ebee305 Fix: Sign all binaries in app bundle with Developer ID, timestamp, and hardened runtime
-f87fad3 Update appcast.xml for v1.5.17
-6d4d382 Remove timestamp from codesign - will debug notarization issues
-f1f78b0 Update appcast.xml for v1.5.16
-f97409f Add *.p12 *.cer *.pem *.key to .gitignore and remove from tracking
-583993c Remove sensitive certificate files from repo
-d088ddc Update appcast.xml for v1.5.15
-df04190 Fix timestamp URL for codesign
-c96a1d7 Update appcast.xml for v1.5.13
-9760b33 Update appcast.xml for v1.5.12
-f6c55b2 Sign DMG with hardened runtime and timestamp
-30d8ca9 Update appcast.xml for v1.5.11
-aa8d575 Fix update-appcast job: add checkout step for git commands
-ead645a Replace git push with GitHub API for appcast.xml updates
-290eee0 Add notarization step to workflow
-e8028b2 Update appcast.xml for v1.5.9
-0fed279 Use tag position as BUILD_NUM for unique incrementing sparkle:version
-8a7d6a1 Add Certificati/ to .gitignore
-92643eb Update appcast.xml for v1.5.6
-71496a7 Update appcast.xml for v1.5.5
+2a39e46 chore: consolidate appcast updates for releases
 270a507 Fix: remove persist-credentials to allow git push
 6141b79 Use two jobs: update-appcast (main) then build (tag) with needs dependency
 4443101 Split workflow: separate checkouts for appcast (main) and build (tag)
@@ -76,8 +49,8 @@ e677111 feat: add launchAtLogin setting to SettingsHelper
 5495068 Use --notes-file instead of --notes for gh release create
 b9ec941 Fix: Remove duplicate 'v' in title and update Node.js to 24
     ]]></description>
-    <pubDate>Fri, 17 Apr 2026 16:43:42 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.5.22/MiniMaxUsage.dmg" sparkle:version="51" sparkle:shortVersionString="1.5.22" type="application/octet-stream" />
+    <pubDate>Fri, 17 Apr 2026 17:19:00 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.6.0/MiniMaxUsage.dmg" sparkle:version="52" sparkle:shortVersionString="1.6.0" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
