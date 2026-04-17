@@ -42,7 +42,8 @@ DerivedData/
 *.temp
 # DMG build folder
 dmg_root/
-# Certificates (never commit these)
+# Docs (superpowers planning files - local only)
+docs/
 Certificati/
 *.p12
 *.cer
