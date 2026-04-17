@@ -17,7 +17,6 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Update appcast.xml
         env:
