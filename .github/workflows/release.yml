@@ -9,11 +9,10 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  update-appcast:
     runs-on: macos-latest
-
     steps:
-      - name: Checkout main for appcast update
+      - name: Checkout main
         uses: actions/checkout@v6
         with:
           ref: main
@@ -27,8 +26,13 @@ jobs:
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Get previous tag to calculate build number (from the tag we're building)
-          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          # Get previous tag to calculate build number
+          # Get all tags sorted by version
+          ALL_TAGS=$(git tag --sort=-v:refname)
+          # The current tag should be the first one (most recent)
+          # Previous tag is the second one
+          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '2p')
+
           if [ -z "$PREV_TAG" ]; then
             BUILD_NUM=1
           else
@@ -36,6 +40,10 @@ jobs:
             PREV_BUILD=$(git rev-list --count "$PREV_TAG..$TAG_NAME" 2>/dev/null || echo "1")
             BUILD_NUM=$((PREV_BUILD + 1))
           fi
+
+          echo "VERSION=$VERSION"
+          echo "BUILD_NUM=$BUILD_NUM"
+          echo "PREV_TAG=$PREV_TAG"
 
           # Build release notes from git log
           if [ -z "$PREV_TAG" ]; then
@@ -81,7 +89,11 @@ jobs:
           git commit -m "Update appcast.xml for v${VERSION}"
           git push origin main
 
-      - name: Checkout tag for build
+  build:
+    runs-on: macos-latest
+    needs: update-appcast
+    steps:
+      - name: Checkout tag
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
@@ -93,14 +105,19 @@ jobs:
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Recalculate build number (same formula as appcast step)
-          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          # Recalculate build number
+          ALL_TAGS=$(git tag --sort=-v:refname)
+          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '2p')
+
           if [ -z "$PREV_TAG" ]; then
             BUILD_NUM=1
           else
             PREV_BUILD=$(git rev-list --count "$PREV_TAG..$TAG_NAME" 2>/dev/null || echo "1")
             BUILD_NUM=$((PREV_BUILD + 1))
           fi
+
+          echo "VERSION=$VERSION"
+          echo "BUILD_NUM=$BUILD_NUM"
 
           # Update CFBundleShortVersionString (display version)
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" MiniMaxUsage/Resources/Info.plist
