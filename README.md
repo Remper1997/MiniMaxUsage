@@ -47,13 +47,13 @@ Configurable refresh interval from 30 seconds to 30 minutes.
 ## Screenshots
 
 ### Menu Bar View
-![Main App](MainApp.png)
+![Main App](Screenshot/MainApp.png)
 
 ### Preferences
-![Preferences](PreferenzeMenu.png)
+![Preferences](Screenshot/PreferenzeMenu.png)
 
 ### Quota Options
-![Quota Options](Quota.png)
+![Quota Options](Screenshot/Quota.png)
 
 ---
 

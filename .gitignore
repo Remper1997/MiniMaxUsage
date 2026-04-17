@@ -42,8 +42,7 @@ DerivedData/
 *.temp
 # DMG build folder
 dmg_root/
-# Screenshots (source files, published versions are in repo root)
-Screenshot/
+# Certificates (never commit these)
 Certificati/
 *.p12
 *.cer
