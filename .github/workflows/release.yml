@@ -12,59 +12,61 @@ jobs:
   update-appcast:
     runs-on: macos-latest
     steps:
-      - name: Checkout main
+      - name: Checkout for tag info
         uses: actions/checkout@v6
         with:
-          ref: main
           fetch-depth: 0
 
-      - name: Update appcast.xml
+      - name: Get file SHA
+        id: sha
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          FILE_SHA=$(curl -L \
+            -X GET "https://api.github.com/repos/${REPO}/contents/appcast.xml" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" | jq -r '.sha')
+          echo "FILE_SHA=$FILE_SHA" >> $GITHUB_OUTPUT
+
+      - name: Update appcast.xml via API
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          FILE_SHA: ${{ steps.sha.outputs.FILE_SHA }}
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Get previous tag to calculate build number
-          # Get all tags sorted by version
+          # Get previous tag (most recent)
           ALL_TAGS=$(git tag --sort=-v:refname)
-          # The current tag should be the first one (most recent)
-          # Previous tag is the second one
-          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '2p')
-
-          if [ -z "$PREV_TAG" ]; then
-            BUILD_NUM=1
-          else
-            # Count commits between previous tag and current tag
-            PREV_BUILD=$(git rev-list --count "$PREV_TAG..$TAG_NAME" 2>/dev/null || echo "1")
-            BUILD_NUM=$((PREV_BUILD + 1))
-          fi
+          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '1p')
 
           echo "VERSION=$VERSION"
-          echo "BUILD_NUM=$BUILD_NUM"
           echo "PREV_TAG=$PREV_TAG"
 
           # Build release notes from git log
-          if [ -z "$PREV_TAG" ]; then
+          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG_NAME" ]; then
             CHANGELOG=$(git log --oneline -20)
           else
             CHANGELOG=$(git log --oneline "$PREV_TAG..$TAG_NAME")
           fi
 
           RELEASE_DATE=$(date -u +"%a, %d %b %Y %H:%M:%S +0000")
-          DMG_URL="https://github.com/Remper1997/MiniMaxUsage/releases/download/v${VERSION}/MiniMaxUsage.dmg"
+          DMG_URL="https://github.com/${REPO}/releases/download/v${VERSION}/MiniMaxUsage.dmg"
 
           # Write complete appcast.xml from scratch using printf
           printf '<?xml version="1.0" encoding="UTF-8"?>\n' > appcast.xml
           printf '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">\n' >> appcast.xml
           printf '  <channel>\n' >> appcast.xml
           printf '    <title>MiniMaxUsage Updates</title>\n' >> appcast.xml
-          printf '    <link>https://github.com/Remper1997/MiniMaxUsage/releases</link>\n' >> appcast.xml
+          printf '    <link>https://github.com/%s/releases</link>\n' "$REPO" >> appcast.xml
           printf '    <description>MiniMaxUsage update feed</description>\n' >> appcast.xml
           printf '    <language>en</language>\n' >> appcast.xml
           printf '  <item>\n' >> appcast.xml
           printf '    <title>Version %s</title>\n' "$VERSION" >> appcast.xml
-          printf '    <sparkle:version>%s</sparkle:version>\n' "$BUILD_NUM" >> appcast.xml
+          printf '    <sparkle:version>%s</sparkle:version>\n' "$GITHUB_RUN_NUMBER" >> appcast.xml
           printf '    <sparkle:shortVersionString>%s</sparkle:shortVersionString>\n' "$VERSION" >> appcast.xml
           printf '    <description><![CDATA[\n' >> appcast.xml
           printf '## MiniMaxUsage v%s\n\n' "$VERSION" >> appcast.xml
@@ -73,7 +75,7 @@ jobs:
           printf '%s\n' "$CHANGELOG" >> appcast.xml
           printf '    ]]></description>\n' >> appcast.xml
           printf '    <pubDate>%s</pubDate>\n' "$RELEASE_DATE" >> appcast.xml
-          printf '    <enclosure url="%s" sparkle:version="%s" sparkle:shortVersionString="%s" type="application/octet-stream" />\n' "$DMG_URL" "$BUILD_NUM" "$VERSION" >> appcast.xml
+          printf '    <enclosure url="%s" sparkle:version="%s" sparkle:shortVersionString="%s" type="application/octet-stream" />\n' "$DMG_URL" "$GITHUB_RUN_NUMBER" "$VERSION" >> appcast.xml
           printf '  </item>\n' >> appcast.xml
           printf '  </channel>\n' >> appcast.xml
           printf '</rss>\n' >> appcast.xml
@@ -81,12 +83,22 @@ jobs:
           echo "=== Updated appcast.xml ==="
           cat appcast.xml
 
-          # Commit and push appcast.xml to main branch
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add appcast.xml
-          git commit -m "Update appcast.xml for v${VERSION}"
-          git push origin main
+          # Update via GitHub API
+          curl -L \
+            -X PUT "https://api.github.com/repos/${REPO}/contents/appcast.xml" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d '{
+              "message": "Update appcast.xml for v'"${VERSION}"'",
+              "committer": {
+                "name": "github-actions[bot]",
+                "email": "github-actions[bot]@users.noreply.github.com"
+              },
+              "content": "'"$(base64 -i appcast.xml | tr -d '\n')"'",
+              "sha": "'"${FILE_SHA}"'"
+            }'
 
   build:
     runs-on: macos-latest
@@ -104,29 +116,16 @@ jobs:
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Recalculate build number
-          ALL_TAGS=$(git tag --sort=-v:refname)
-          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '2p')
-
-          if [ -z "$PREV_TAG" ]; then
-            BUILD_NUM=1
-          else
-            PREV_BUILD=$(git rev-list --count "$PREV_TAG..$TAG_NAME" 2>/dev/null || echo "1")
-            BUILD_NUM=$((PREV_BUILD + 1))
-          fi
-
-          echo "VERSION=$VERSION"
-          echo "BUILD_NUM=$BUILD_NUM"
-
           # Update CFBundleShortVersionString (display version)
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" MiniMaxUsage/Resources/Info.plist
 
           # Update CFBundleVersion (comparison version - must be numeric and incrementing)
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" MiniMaxUsage/Resources/Info.plist
+          # Use GITHUB_RUN_NUMBER for monotonically increasing build number
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" MiniMaxUsage/Resources/Info.plist
 
           echo "=== Updated Info.plist ==="
           echo "CFBundleShortVersionString: $VERSION"
-          echo "CFBundleVersion: $BUILD_NUM"
+          echo "CFBundleVersion: $GITHUB_RUN_NUMBER"
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -136,18 +135,6 @@ jobs:
 
       - name: Build release
         run: xcodebuild -project MiniMaxUsage.xcodeproj -scheme MiniMaxUsage -configuration Release build BUILD_OUTPUT_DIR=$(pwd)/build
-
-      - name: Create DMG with Applications alias
-        run: |
-          mkdir -p dmg_root
-          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "MiniMaxUsage.app" -type d 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: App not found in DerivedData"
-            exit 1
-          fi
-          cp -R "$APP_PATH" dmg_root/
-          ln -s /Applications dmg_root/Applications
-          hdiutil create MiniMaxUsage.dmg -volname "MiniMaxUsage" -srcfolder dmg_root -ov -format UDZO
 
       - name: Import Code Signing Certificate
         env:
@@ -170,7 +157,7 @@ jobs:
           security find-identity -v -p codesigning $KEYCHAIN_PATH
           rm cert.p12
 
-      - name: Sign DMG
+      - name: Sign all binaries in app bundle
         env:
           APP_SIGNING_IDENTITY: ${{ secrets.APP_SIGNING_IDENTITY }}
         run: |
@@ -178,8 +165,95 @@ jobs:
             echo "No signing identity configured, skipping sign"
             exit 0
           fi
-          codesign -s "$APP_SIGNING_IDENTITY" --force --deep MiniMaxUsage.dmg
-          codesign -dv MiniMaxUsage.dmg
+
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "MiniMaxUsage.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: App not found in DerivedData"
+            exit 1
+          fi
+
+          echo "=== Signing all binaries in app bundle ==="
+
+          # Remove existing signatures to avoid conflicts
+          rm -rf "$APP_PATH/_CodeSignature"
+          find "$APP_PATH" -name "_CodeSignature" -type d -exec rm -rf {} \; 2>/dev/null || true
+
+          # Step 1: Sign leaf binaries first (dylibs, executables in XPC)
+          # These must be signed BEFORE their parent containers
+          find "$APP_PATH/Contents/Frameworks" -type f \( -name "*.dylib" -o -name "*.so" \) -exec codesign -s "$APP_SIGNING_IDENTITY" --force --timestamp --options runtime {} \; 2>/dev/null || true
+
+          # Step 2: Sign XPC services with --deep (signs internal binaries automatically)
+          find "$APP_PATH" -name "*.xpc" -type d | while read xpc; do
+            echo "Signing XPC (deep): $xpc"
+            codesign -s "$APP_SIGNING_IDENTITY" --force --deep --timestamp --options runtime "$xpc"
+          done
+
+          # Step 3: Sign frameworks with --deep (signs internal libraries and binaries)
+          find "$APP_PATH/Contents/Frameworks" -name "*.framework" -type d | while read framework; do
+            echo "Signing framework (deep): $framework"
+            codesign -s "$APP_SIGNING_IDENTITY" --force --deep --timestamp --options runtime "$framework"
+          done
+
+          # Step 4: Sign the main app executable
+          echo "Signing main app: $APP_PATH/Contents/MacOS/MiniMaxUsage"
+          codesign -s "$APP_SIGNING_IDENTITY" --force --timestamp --options runtime "$APP_PATH/Contents/MacOS/MiniMaxUsage"
+
+          # Step 5: Sign the app bundle itself with --deep
+          echo "Signing app bundle: $APP_PATH"
+          codesign -s "$APP_SIGNING_IDENTITY" --force --deep --timestamp --options runtime "$APP_PATH"
+
+          echo "=== Verifying signatures ==="
+          codesign -vv "$APP_PATH/Contents/MacOS/MiniMaxUsage"
+          codesign -vv "$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
+          codesign -vv "$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+
+      - name: Create DMG with Applications alias
+        run: |
+          mkdir -p dmg_root
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "MiniMaxUsage.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: App not found in DerivedData"
+            exit 1
+          fi
+          cp -R "$APP_PATH" dmg_root/
+          ln -s /Applications dmg_root/Applications
+          hdiutil create MiniMaxUsage.dmg -volname "MiniMaxUsage" -srcfolder dmg_root -ov -format UDZO
+
+      - name: Sign DMG with Developer ID
+        env:
+          APP_SIGNING_IDENTITY: ${{ secrets.APP_SIGNING_IDENTITY }}
+        run: |
+          if [ -z "$APP_SIGNING_IDENTITY" ]; then
+            echo "No signing identity configured, skipping sign"
+            exit 0
+          fi
+          echo "=== Signing DMG with Developer ID ==="
+          codesign -s "$APP_SIGNING_IDENTITY" --force --timestamp --options runtime MiniMaxUsage.dmg
+          echo "=== Verifying DMG signature ==="
+          codesign -vv MiniMaxUsage.dmg
+          echo "=== DMG signature info ==="
+          codesign -d MiniMaxUsage.dmg
+
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+            echo "No notarization credentials configured, skipping notarization"
+            exit 0
+          fi
+          echo "Submitting DMG for notarization..."
+          xcrun notarytool submit MiniMaxUsage.dmg \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple MiniMaxUsage.dmg
+          echo "Verifying staple..."
+          xcrun stapler validate -v MiniMaxUsage.dmg
 
       - name: Create Release
         env:
