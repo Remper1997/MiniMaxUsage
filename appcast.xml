@@ -6,15 +6,26 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 1.6.0</title>
-    <sparkle:version>52</sparkle:version>
-    <sparkle:shortVersionString>1.6.0</sparkle:shortVersionString>
+    <title>Version 1.6.1</title>
+    <sparkle:version>53</sparkle:version>
+    <sparkle:shortVersionString>1.6.1</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v1.6.0
+## MiniMaxUsage v1.6.1
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
+acaa29e feat: add retry logic to API service with 5 attempts and 15s delay
+07e31ed feat: show yellow retry indicator in menu bar during API retries
+b31dc81 feat: add retry logic to API service with 5 attempts and 15s delay
+7b08576 chore: remove docs/ from git tracking (local planning files)
+4ae80b4 chore: remove dmg_root from git tracking (build artifact)
+2675751 chore: remove docs/ from git tracking and add to gitignore
+7e64e52 chore: remove tracked DMG file (releases are on GitHub)
+eb6baf8 docs: Move screenshots to Screenshot/ folder and update README paths
+3c07310 chore: ignore Screenshot/ directory (source files)
+fd7a237 docs: Add screenshots to README
+b052f73 Update appcast.xml for v1.6.0
 2a39e46 chore: consolidate appcast updates for releases
 270a507 Fix: remove persist-credentials to allow git push
 6141b79 Use two jobs: update-appcast (main) then build (tag) with needs dependency
@@ -49,8 +60,8 @@ e677111 feat: add launchAtLogin setting to SettingsHelper
 5495068 Use --notes-file instead of --notes for gh release create
 b9ec941 Fix: Remove duplicate 'v' in title and update Node.js to 24
     ]]></description>
-    <pubDate>Fri, 17 Apr 2026 17:19:00 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.6.0/MiniMaxUsage.dmg" sparkle:version="52" sparkle:shortVersionString="1.6.0" type="application/octet-stream" />
+    <pubDate>Sat, 18 Apr 2026 14:42:48 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.6.1/MiniMaxUsage.dmg" sparkle:version="53" sparkle:shortVersionString="1.6.1" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
