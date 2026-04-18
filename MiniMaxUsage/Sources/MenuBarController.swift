@@ -203,10 +203,18 @@ class MenuBarController: NSObject {
 
     private func updateButton(title: String, color: NSColor) {
         guard let button = statusItem.button else { return }
-        button.title = title
 
+        // Create attributed string
         let attributedTitle = NSMutableAttributedString(string: title)
         attributedTitle.addAttribute(.foregroundColor, value: color, range: NSRange(location: 0, length: attributedTitle.length))
+
+        // Add glow effect via shadow
+        let shadow = NSShadow()
+        shadow.shadowColor = color.withAlphaComponent(0.8)
+        shadow.shadowBlurRadius = 4
+        shadow.shadowOffset = NSSize(width: 0, height: 0)
+        attributedTitle.addAttribute(.shadow, value: shadow, range: NSRange(location: 0, length: attributedTitle.length))
+
         button.attributedTitle = attributedTitle
     }
 
