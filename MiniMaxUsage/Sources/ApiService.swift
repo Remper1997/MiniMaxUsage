@@ -7,6 +7,7 @@ enum ApiError: Error, LocalizedError {
     case serverError(Int)
     case decodingError(Error)
     case rawResponse(String)
+    case maxRetriesExceeded(attempts: Int)
 
     var errorDescription: String? {
         switch self {
@@ -22,12 +23,16 @@ enum ApiError: Error, LocalizedError {
             return "Failed to decode response: \(error.localizedDescription)"
         case .rawResponse(let response):
             return "Raw response: \(response)"
+        case .maxRetriesExceeded(let attempts):
+            return "Connection failed after \(attempts) attempts"
         }
     }
 }
 
 class ApiService {
     private let urlString = "https://www.minimax.io/v1/api/openplatform/coding_plan/remains"
+    private let maxRetries = 5
+    private let retryDelay: TimeInterval = 15
 
     func fetchUsage(apiKey: String) async throws -> MiniMaxUsage {
         guard let url = URL(string: urlString) else {
@@ -40,32 +45,44 @@ class ApiService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30
 
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+        var lastError: Error = ApiError.invalidResponse
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw ApiError.invalidResponse
-            }
-
-            guard (200...299).contains(httpResponse.statusCode) else {
-                throw ApiError.serverError(httpResponse.statusCode)
-            }
-
+        for attempt in 1...maxRetries {
             do {
-                let decoder = JSONDecoder()
-                let usage = try decoder.decode(MiniMaxUsage.self, from: data)
-                return usage
-            } catch {
-                if let rawString = String(data: data, encoding: .utf8) {
-                    print("Raw response: \(rawString)")
-                    throw ApiError.rawResponse(rawString.prefix(500).description)
+                let (data, response) = try await URLSession.shared.data(for: request)
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw ApiError.invalidResponse
                 }
-                throw ApiError.decodingError(error)
+
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    throw ApiError.serverError(httpResponse.statusCode)
+                }
+
+                do {
+                    let decoder = JSONDecoder()
+                    let usage = try decoder.decode(MiniMaxUsage.self, from: data)
+                    return usage
+                } catch {
+                    if let rawString = String(data: data, encoding: .utf8) {
+                        print("Raw response: \(rawString)")
+                        throw ApiError.rawResponse(rawString.prefix(500).description)
+                    }
+                    throw ApiError.decodingError(error)
+                }
+            } catch let error as ApiError {
+                lastError = error
+            } catch {
+                lastError = ApiError.networkError(error)
             }
-        } catch let error as ApiError {
-            throw error
-        } catch {
-            throw ApiError.networkError(error)
+
+            // Retry if not last attempt
+            if attempt < maxRetries {
+                print("Attempt \(attempt) failed, retrying in \(retryDelay)s... (\(attempt)/\(maxRetries))")
+                try? await Task.sleep(nanoseconds: UInt64(retryDelay * 1_000_000_000))
+            }
         }
+
+        throw ApiError.maxRetriesExceeded(attempts: maxRetries)
     }
 }
