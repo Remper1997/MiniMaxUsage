@@ -262,10 +262,28 @@ jobs:
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Create release notes
-          echo "## MiniMaxUsage v${VERSION}" > release_notes.md
-          echo "" >> release_notes.md
-          echo "Automated release built by GitHub Actions." >> release_notes.md
+          # Get previous tag
+          ALL_TAGS=$(git tag --sort=-v:refname)
+          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '1p')
+
+          # Build release notes from git log
+          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG_NAME" ]; then
+            CHANGELOG=$(git log --oneline -20)
+          else
+            CHANGELOG=$(git log --oneline "$PREV_TAG..$TAG_NAME")
+          fi
+
+          # Create release notes with changelog
+          {
+            echo "## MiniMaxUsage v${VERSION}"
+            echo ""
+            echo "Automated release built by GitHub Actions."
+            echo ""
+            echo "### Changes in this release:"
+            echo "\`\`\`"
+            echo "$CHANGELOG"
+            echo "\`\`\`"
+          } > release_notes.md
 
           # Create release with DMG
           gh release create "v${VERSION}" \
