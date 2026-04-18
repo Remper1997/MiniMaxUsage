@@ -34,6 +34,8 @@ class ApiService {
     private let maxRetries = 5
     private let retryDelay: TimeInterval = 15
 
+    var onRetry: ((Int, Int) -> Void)? // Called on each retry: (currentAttempt, maxRetries)
+
     func fetchUsage(apiKey: String) async throws -> MiniMaxUsage {
         guard let url = URL(string: urlString) else {
             throw ApiError.invalidURL
@@ -78,6 +80,7 @@ class ApiService {
 
             // Retry if not last attempt
             if attempt < maxRetries {
+                onRetry?(attempt, maxRetries)
                 print("Attempt \(attempt) failed, retrying in \(retryDelay)s... (\(attempt)/\(maxRetries))")
                 try? await Task.sleep(nanoseconds: UInt64(retryDelay * 1_000_000_000))
             }

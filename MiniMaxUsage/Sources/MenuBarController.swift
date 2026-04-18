@@ -23,10 +23,20 @@ class MenuBarController: NSObject {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
 
+        setupRetryCallback()
         setupMenu()
         setupSettingsObserver()
         startTimer()
         refreshData()
+    }
+
+    private func setupRetryCallback() {
+        apiService.onRetry = { [weak self] attempt, maxRetries in
+            DispatchQueue.main.async {
+                let title = "🔄 Retry \(attempt)/\(maxRetries)..."
+                self?.updateButton(title: title, color: .systemYellow)
+            }
+        }
     }
 
     private func setupMenu() {
