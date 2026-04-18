@@ -44,6 +44,10 @@ DerivedData/
 dmg_root/
 # Docs (superpowers planning files - local only)
 docs/
+# Superpowers (brainstorming session files - local only)
+.superpowers/
+# Local Claude instructions
+CLAUDE.md
 Certificati/
 *.p12
 *.cer
