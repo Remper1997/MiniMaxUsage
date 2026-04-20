@@ -6,15 +6,18 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 1.6.2</title>
-    <sparkle:version>54</sparkle:version>
-    <sparkle:shortVersionString>1.6.2</sparkle:shortVersionString>
+    <title>Version 1.6.3</title>
+    <sparkle:version>55</sparkle:version>
+    <sparkle:shortVersionString>1.6.3</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v1.6.2
+## MiniMaxUsage v1.6.3
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
+dad8ebc fix: improve daily budget calculation and add schema version
+370370f chore: add .superpowers to gitignore
+55115f5 Update appcast.xml for v1.6.2
 88c4322 Merge pull request #1 from Remper1997/feature/glass-effect-menu-button
 d7f3f68 feat: add glass glow effect to menu bar button
 2091316 fix: include git changelog in release notes
@@ -64,8 +67,8 @@ e677111 feat: add launchAtLogin setting to SettingsHelper
 5495068 Use --notes-file instead of --notes for gh release create
 b9ec941 Fix: Remove duplicate 'v' in title and update Node.js to 24
     ]]></description>
-    <pubDate>Sat, 18 Apr 2026 15:07:06 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.6.2/MiniMaxUsage.dmg" sparkle:version="54" sparkle:shortVersionString="1.6.2" type="application/octet-stream" />
+    <pubDate>Mon, 20 Apr 2026 10:14:05 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.6.3/MiniMaxUsage.dmg" sparkle:version="55" sparkle:shortVersionString="1.6.3" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
