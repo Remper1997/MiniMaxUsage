@@ -116,13 +116,13 @@ class NotificationHelper {
             ? Double(dailyTracking?.todayUsage ?? 0) / Double(dailyTracking?.dailyBudget ?? 0)
             : 0
 
-        // 5h threshold check
+        // 5h threshold check - always check all quota types, not just the selected one
         checkThresholdCrossing(
             newPercent: fiveHourUsedPercent,
             previousPercent: previousFiveHourPercent,
             quotaName: "5h window",
-            currentThreshold: currentQuotaType == .fiveHour ? Self.warningThreshold : 0,
-            criticalThreshold: currentQuotaType == .fiveHour ? Self.criticalThreshold : 0,
+            currentThreshold: Self.warningThreshold,
+            criticalThreshold: Self.criticalThreshold,
             isDaily: false
         )
         previousFiveHourPercent = fiveHourUsedPercent
@@ -132,29 +132,28 @@ class NotificationHelper {
             newPercent: weeklyUsedPercent,
             previousPercent: previousWeeklyPercent,
             quotaName: "Weekly",
-            currentThreshold: currentQuotaType == .weekly ? Self.warningThreshold : 0,
-            criticalThreshold: currentQuotaType == .weekly ? Self.criticalThreshold : 0,
+            currentThreshold: Self.warningThreshold,
+            criticalThreshold: Self.criticalThreshold,
             isDaily: false
         )
         previousWeeklyPercent = weeklyUsedPercent
 
         // Daily budget check
-        if currentQuotaType == .daily {
-            checkThresholdCrossing(
-                newPercent: dailyUsedPercent,
-                previousPercent: previousDailyPercent,
-                quotaName: "Daily Budget",
-                currentThreshold: Self.warningThreshold,
-                criticalThreshold: Self.criticalThreshold,
-                isDaily: true
-            )
-        }
+        checkThresholdCrossing(
+            newPercent: dailyUsedPercent,
+            previousPercent: previousDailyPercent,
+            quotaName: "Daily Budget",
+            currentThreshold: Self.warningThreshold,
+            criticalThreshold: Self.criticalThreshold,
+            isDaily: true
+        )
         previousDailyPercent = dailyUsedPercent
 
-        // Reset detection (check if reset time increased significantly)
+        // Reset detection (check if remaining time decreased significantly - indicates quota reset)
+        // When quota resets, remainsTime drops from a large value to a small one
         let currentResetTime = modelRemain.remainsTime
         let previousResetTime = previousResetTimes[0] ?? 0
-        if previousResetTime > 0 && currentResetTime > previousResetTime + 3600000 {  // > 1 hour increase = reset
+        if previousResetTime > 0 && currentResetTime < previousResetTime - 3600000 {  // > 1 hour decrease = reset
             if Self.notifyResetEnabled {
                 sendNotification(title: "Quota Reset", body: "MiniMaxUsage: 5h window quota has been reset")
             }
@@ -164,7 +163,7 @@ class NotificationHelper {
 
         let currentWeeklyResetTime = modelRemain.weeklyRemainsTime
         let previousWeeklyResetTime = previousResetTimes[1] ?? 0
-        if previousWeeklyResetTime > 0 && currentWeeklyResetTime > previousWeeklyResetTime + 86400000 {  // > 1 day increase
+        if previousWeeklyResetTime > 0 && currentWeeklyResetTime < previousWeeklyResetTime - 86400000 {  // > 1 day decrease
             if Self.notifyResetEnabled {
                 sendNotification(title: "Weekly Reset", body: "MiniMaxUsage: Weekly quota has been reset")
             }

@@ -18,6 +18,8 @@ class PreferencesWindow: NSWindowController {
     private var autoUpdateCheckbox: NSButton!
     private var lastCheckedLabel: NSTextField!
     private var checkNowButton: NSButton!
+    private var warningSlider: NSSlider!
+    private var criticalSlider: NSSlider!
 
     private let refreshOptions: [(String, TimeInterval)] = [
         ("30 seconds", 30),
@@ -87,6 +89,7 @@ class PreferencesWindow: NSWindowController {
         super.init(window: window)
 
         setupUI()
+
         loadExistingAPIKey()
         loadRefreshInterval()
         loadDisplaySettings()
@@ -97,10 +100,14 @@ class PreferencesWindow: NSWindowController {
     }
 
     private func setupUI() {
-        guard let tabViewController = window?.contentViewController as? NSTabViewController else { return }
+        guard let tabViewController = window?.contentViewController as? NSTabViewController else {
+            return
+        }
         let preferencesTab = tabViewController.tabView.tabViewItem(at: 0)
         guard let scrollView = preferencesTab.view as? NSScrollView,
-              let contentView = scrollView.documentView else { return }
+              let contentView = scrollView.documentView else {
+            return
+        }
 
         // Build UI from bottom to top using positive coordinates
         var yPosition: CGFloat = 20
@@ -152,10 +159,11 @@ class PreferencesWindow: NSWindowController {
         warningLabel.frame = NSRect(x: 20, y: yPosition, width: 120, height: 20)
         contentView.addSubview(warningLabel)
 
-        let warningSlider = NSSlider(value: NotificationHelper.warningThreshold * 100, minValue: 10, maxValue: 95, target: self, action: #selector(warningSliderChanged))
+        let warningSlider = NSSlider(value: NotificationHelper.warningThreshold * 100, minValue: 10, maxValue: Double(NotificationHelper.criticalThreshold * 100) - 1, target: self, action: #selector(warningSliderChanged))
         warningSlider.frame = NSRect(x: 140, y: yPosition, width: 200, height: 20)
         warningSlider.tag = 100
         contentView.addSubview(warningSlider)
+        self.warningSlider = warningSlider
 
         let warningValueLabel = NSTextField(labelWithString: "\(Int(NotificationHelper.warningThreshold * 100))%")
         warningValueLabel.frame = NSRect(x: 350, y: yPosition, width: 50, height: 20)
@@ -415,11 +423,27 @@ class PreferencesWindow: NSWindowController {
     @objc private func warningSliderChanged(_ sender: NSSlider) {
         NotificationHelper.warningThreshold = sender.doubleValue / 100.0
         updateWarningLabel()
+        // Ensure warning doesn't exceed critical
+        if let critical = criticalSlider, sender.doubleValue >= critical.doubleValue {
+            critical.doubleValue = min(sender.doubleValue + 1, 99)
+            NotificationHelper.criticalThreshold = critical.doubleValue / 100.0
+            updateCriticalLabel()
+        }
     }
 
     @objc private func criticalSliderChanged(_ sender: NSSlider) {
         NotificationHelper.criticalThreshold = sender.doubleValue / 100.0
         updateCriticalLabel()
+        // Ensure critical is always above warning
+        if let warning = warningSlider, sender.doubleValue <= warning.doubleValue {
+            warning.doubleValue = max(sender.doubleValue - 1, 10)
+            NotificationHelper.warningThreshold = warning.doubleValue / 100.0
+            updateWarningLabel()
+        }
+        // Update warning slider's max to be just below critical
+        if let warning = warningSlider {
+            warning.maxValue = sender.doubleValue - 1
+        }
     }
 
     @objc private func notifyWarningChanged(_ sender: NSButton) {

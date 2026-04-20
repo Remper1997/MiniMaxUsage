@@ -152,11 +152,6 @@ class MenuBarController: NSObject {
             return
         }
 
-        // DEBUG: Log API values
-        print("DEBUG: weeklyRemainsTime = \(m2.weeklyRemainsTime) ms")
-        print("DEBUG: currentWeeklyUsageCount = \(m2.currentWeeklyUsageCount)")
-        print("DEBUG: currentWeeklyTotalCount = \(m2.currentWeeklyTotalCount)")
-
         // Get quota info based on selected type
         let quotaInfo: QuotaInfo
 
@@ -173,14 +168,6 @@ class MenuBarController: NSObject {
                 dailyBudget: tracking.dailyBudget,
                 weeklyRemainsTimeMs: m2.weeklyRemainsTime
             )
-
-            // DEBUG: Log daily tracking values
-            print("DEBUG DAILY: todayUsage = \(tracking.todayUsage)")
-            print("DEBUG DAILY: dailyBudget = \(tracking.dailyBudget)")
-            print("DEBUG DAILY: daysRemaining = \(tracking.daysRemaining)")
-            print("DEBUG DAILY: quotaInfo.used = \(quotaInfo.used)")
-            print("DEBUG DAILY: quotaInfo.total = \(quotaInfo.total)")
-            print("DEBUG DAILY: quotaInfo.usedPercent = \(quotaInfo.usedPercent)")
         } else {
             quotaInfo = m2.quotaInfo(for: SettingsHelper.quotaType)
         }

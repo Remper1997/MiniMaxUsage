@@ -148,6 +148,18 @@ struct UsageSnapshot: Codable {
     let dailyBudget: Int
     let isDailyBudgetExceeded: Bool
 
+    var fiveHourUsedPercent: Double {
+        fiveHourTotal > 0 ? Double(fiveHourUsed) / Double(fiveHourTotal) : 0
+    }
+
+    var weeklyUsedPercent: Double {
+        weeklyTotal > 0 ? Double(weeklyUsed) / Double(weeklyTotal) : 0
+    }
+
+    var dailyUsedPercent: Double {
+        dailyBudget > 0 ? Double(dailyUsed) / Double(dailyBudget) : 0
+    }
+
     init(from modelRemain: ModelRemain, dailyTracking: SettingsHelper.DailyTrackingData?, currentQuotaType: QuotaType) {
         self.timestamp = Date()
         self.fiveHourUsed = modelRemain.currentIntervalTotalCount - modelRemain.currentIntervalUsageCount

@@ -1,9 +1,17 @@
 import Foundation
 
-enum QuotaType: Int {
+enum QuotaType: Int, CaseIterable {
     case fiveHour = 0
     case weekly = 1
     case daily = 2
+
+    var displayName: String {
+        switch self {
+        case .fiveHour: return "5h Window"
+        case .weekly: return "Weekly"
+        case .daily: return "Daily"
+        }
+    }
 }
 
 class SettingsHelper {
