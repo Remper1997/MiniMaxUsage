@@ -6,15 +6,31 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 1.6.3</title>
-    <sparkle:version>55</sparkle:version>
-    <sparkle:shortVersionString>1.6.3</sparkle:shortVersionString>
+    <title>Version 1.7.0</title>
+    <sparkle:version>56</sparkle:version>
+    <sparkle:shortVersionString>1.7.0</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v1.6.3
+## MiniMaxUsage v1.7.0
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
+db9ec88 Merge pull request #2 from Remper1997/feature/StatisticsTab
+02fae55 Improve Statistics tab daily view
+9a34b58 Fix Statistics tab rendering in Preferences window
+f5e3a0d Fix tab view rendering issue when switching tabs
+b6d8ee4 Fix notification and statistics tab issues
+a9087b4 fix: correct redundant ternary and persist reset detection state
+7333d4c feat: add notification threshold sliders and toggles to Preferences
+5fc5237 feat: wire notifications and history snapshots into refresh flow
+51ae77d feat: convert PreferencesWindow to tabbed interface with Statistics tab
+44fb641 feat: add SwiftUI StatisticsTabView with charts
+cd67ab5 feat: add HistoryStorage for usage snapshot persistence
+814cf4d feat: add NotificationHelper for threshold-based notifications
+fa2b5dd feat: add UsageSnapshot model for history tracking
+5d310df feat: add phase 1 design for notifications and statistics tab
+e8da504 fix: improve release notes to show only commits since last tag
+9ca9b32 Update appcast.xml for v1.6.3
 dad8ebc fix: improve daily budget calculation and add schema version
 370370f chore: add .superpowers to gitignore
 55115f5 Update appcast.xml for v1.6.2
@@ -67,8 +83,8 @@ e677111 feat: add launchAtLogin setting to SettingsHelper
 5495068 Use --notes-file instead of --notes for gh release create
 b9ec941 Fix: Remove duplicate 'v' in title and update Node.js to 24
     ]]></description>
-    <pubDate>Mon, 20 Apr 2026 10:14:05 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.6.3/MiniMaxUsage.dmg" sparkle:version="55" sparkle:shortVersionString="1.6.3" type="application/octet-stream" />
+    <pubDate>Mon, 20 Apr 2026 22:45:11 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.7.0/MiniMaxUsage.dmg" sparkle:version="56" sparkle:shortVersionString="1.7.0" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
