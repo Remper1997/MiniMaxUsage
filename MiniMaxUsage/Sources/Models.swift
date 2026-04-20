@@ -134,3 +134,30 @@ struct BaseResp: Codable {
         case statusMsg = "status_msg"
     }
 }
+
+// Usage history snapshot for Statistics tab charts
+struct UsageSnapshot: Codable {
+    let timestamp: Date
+    let fiveHourUsed: Int
+    let fiveHourTotal: Int
+    let fiveHourRemaining: Int
+    let weeklyUsed: Int
+    let weeklyTotal: Int
+    let weeklyRemaining: Int
+    let dailyUsed: Int
+    let dailyBudget: Int
+    let isDailyBudgetExceeded: Bool
+
+    init(from modelRemain: ModelRemain, dailyTracking: SettingsHelper.DailyTrackingData?, currentQuotaType: QuotaType) {
+        self.timestamp = Date()
+        self.fiveHourUsed = modelRemain.currentIntervalTotalCount - modelRemain.currentIntervalUsageCount
+        self.fiveHourTotal = modelRemain.currentIntervalTotalCount
+        self.fiveHourRemaining = modelRemain.currentIntervalUsageCount
+        self.weeklyUsed = modelRemain.currentWeeklyTotalCount - modelRemain.currentWeeklyUsageCount
+        self.weeklyTotal = modelRemain.currentWeeklyTotalCount
+        self.weeklyRemaining = modelRemain.currentWeeklyUsageCount
+        self.dailyUsed = dailyTracking?.todayUsage ?? 0
+        self.dailyBudget = dailyTracking?.dailyBudget ?? 0
+        self.isDailyBudgetExceeded = (dailyTracking?.todayUsage ?? 0) > (dailyTracking?.dailyBudget ?? 0)
+    }
+}
