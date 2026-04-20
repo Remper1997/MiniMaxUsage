@@ -39,20 +39,22 @@ class PreferencesWindow: NSWindowController {
         tabViewController.tabStyle = .toolbar
 
         // Preferences tab (existing content)
-        let preferencesTab = NSTabViewItem(viewController: NSViewController())
-        preferencesTab.label = "Preferences"
-        preferencesTab.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Preferences")
-
+        let preferencesVC = NSViewController()
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.autoresizingMask = [.width, .height]
 
         let contentViewHeight: CGFloat = 925
         let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: contentViewHeight))
+        contentView.autoresizingMask = [.width]
         scrollView.documentView = contentView
-        preferencesTab.view = scrollView
+        preferencesVC.view = scrollView
+        let preferencesTab = NSTabViewItem(viewController: preferencesVC)
+        preferencesTab.label = "Preferences"
+        preferencesTab.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Preferences")
 
         tabViewController.addTabViewItem(preferencesTab)
 
