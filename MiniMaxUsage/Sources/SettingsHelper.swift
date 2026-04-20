@@ -17,9 +17,13 @@ class SettingsHelper {
     private static let lastUpdateCheckKey = "lastUpdateCheck"
 
     // Daily tracking UserDefaults keys
+    private static let dailyTrackingSchemaVersionKey = "dailyTrackingSchemaVersion"
     private static let dailyLastRecordedDateKey = "dailyLastRecordedDate"
     private static let dailyLastRecordedRemainingKey = "dailyLastRecordedRemaining"
     private static let dailyBudgetAtDayStartKey = "dailyBudgetAtDayStart"
+    private static let dailyLastRecordedRemainTimeMsKey = "dailyLastRecordedRemainTimeMs"
+
+    private static let currentSchemaVersion = 2
 
     static var quotaType: QuotaType {
         get {
@@ -162,6 +166,16 @@ class SettingsHelper {
         }
     }
 
+    // Weekly remain time ms at time of last daily reset
+    private static var dailyLastRecordedRemainTimeMs: Int {
+        get {
+            return UserDefaults.standard.integer(forKey: dailyLastRecordedRemainTimeMsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: dailyLastRecordedRemainTimeMsKey)
+        }
+    }
+
     // Computed daily tracking data
     struct DailyTrackingData {
         let todayUsage: Int        // Requests used today
@@ -177,15 +191,20 @@ class SettingsHelper {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
+        // Check schema version - if mismatch, reset tracking
+        let savedSchemaVersion = UserDefaults.standard.integer(forKey: dailyTrackingSchemaVersionKey)
+        let schemaMismatch = savedSchemaVersion != currentSchemaVersion
+
         // Calculate actual days remaining from weeklyRemainsTime
         let daysRemaining = daysRemainingFromMs(weeklyRemainsTimeMs)
 
-        // Check for week reset: if current remaining is significantly higher than stored,
-        // the weekly quota has been reset and we should treat it as a new day
-        let weekResetDetected = dailyLastRecordedRemaining > 0 &&
-                                currentWeeklyRemaining > dailyLastRecordedRemaining
+        // Check for week reset: if current remain time is significantly greater than stored,
+        // the weekly quota has been reset (time went from low to high, e.g., 1 day to 7 days)
+        // A week has roughly 604800000 ms (7 days), so if time increased by more than 1 day, it's a reset
+        let timeIncreasedByMoreThanOneDay = (weeklyRemainsTimeMs - dailyLastRecordedRemainTimeMs) > 86400000
+        let weekResetDetected = dailyLastRecordedRemainTimeMs > 0 && timeIncreasedByMoreThanOneDay
 
-        if let lastDate = dailyLastRecordedDate {
+        if let lastDate = dailyLastRecordedDate, !schemaMismatch {
             let lastDay = calendar.startOfDay(for: lastDate)
 
             if lastDay == today && !weekResetDetected {
@@ -200,14 +219,18 @@ class SettingsHelper {
                 dailyBudgetAtDayStart = newBudget
                 dailyLastRecordedDate = today
                 dailyLastRecordedRemaining = currentWeeklyRemaining
+                dailyLastRecordedRemainTimeMs = weeklyRemainsTimeMs
+                UserDefaults.standard.set(currentSchemaVersion, forKey: dailyTrackingSchemaVersionKey)
                 return DailyTrackingData(todayUsage: 0, dailyBudget: newBudget, daysRemaining: daysRemaining)
             }
         } else {
-            // First run - initialize tracking
+            // First run or schema mismatch - initialize tracking
             let newBudget = calculateDailyBudget(weeklyRemaining: currentWeeklyRemaining, days: daysRemaining)
             dailyBudgetAtDayStart = newBudget
             dailyLastRecordedDate = today
             dailyLastRecordedRemaining = currentWeeklyRemaining
+            dailyLastRecordedRemainTimeMs = weeklyRemainsTimeMs
+            UserDefaults.standard.set(currentSchemaVersion, forKey: dailyTrackingSchemaVersionKey)
             return DailyTrackingData(todayUsage: 0, dailyBudget: newBudget, daysRemaining: daysRemaining)
         }
     }
