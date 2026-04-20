@@ -15,62 +15,71 @@ struct StatisticsTabView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Summary Card
-            SummaryCardView(snapshot: mostRecentSnapshot)
-                .padding(.horizontal)
-
-            // Timeframe Toggle
-            Picker("Timeframe", selection: $selectedTimeframe) {
-                ForEach(Timeframe.allCases, id: \.self) { tf in
-                    Text(tf.rawValue).tag(tf)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .onChange(of: selectedTimeframe) { _ in
-                loadData()
-            }
-
-            // Chart
-            if #available(macOS 13.0, *) {
-                UsageChartView(snapshots: snapshots, selectedQuotaType: selectedQuotaType, selectedTimeframe: selectedTimeframe)
-                    .frame(minHeight: 180)
+        GeometryReader { geometry in
+            VStack(spacing: 12) {
+                // Summary Card
+                SummaryCardView(snapshot: mostRecentSnapshot)
                     .padding(.horizontal)
-            } else {
-                Text("Charts require macOS 13 or later")
-                    .foregroundColor(.secondary)
-            }
 
-            Spacer()
-
-            // Bottom buttons
-            HStack(spacing: 12) {
-                Button(action: refreshData) {
-                    Label("Refresh", systemImage: "arrow.clockwise")
+                if snapshots.isEmpty && !isLoading {
+                    Text("No data available yet")
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .buttonStyle(.bordered)
 
-                Button(action: exportCSV) {
-                    Label("Export CSV", systemImage: "square.and.arrow.up")
+                // Timeframe Toggle
+                Picker("Timeframe", selection: $selectedTimeframe) {
+                    ForEach(Timeframe.allCases, id: \.self) { tf in
+                        Text(tf.rawValue).tag(tf)
+                    }
                 }
-                .buttonStyle(.bordered)
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .onChange(of: selectedTimeframe) { _ in
+                    loadData()
+                }
+
+                // Chart
+                if #available(macOS 13.0, *) {
+                    UsageChartView(snapshots: snapshots, selectedQuotaType: selectedQuotaType, selectedTimeframe: selectedTimeframe)
+                        .frame(minHeight: 180)
+                        .padding(.horizontal)
+                } else {
+                    Text("Charts require macOS 13 or later")
+                        .foregroundColor(.secondary)
+                }
 
                 Spacer()
 
-                // Quota type selector
-                Picker("Quota", selection: $selectedQuotaType) {
-                    ForEach(QuotaType.allCases, id: \.self) { qt in
-                        Text(qt.displayName).tag(qt)
+                // Bottom buttons
+                HStack(spacing: 12) {
+                    Button(action: refreshData) {
+                        Label("Refresh", systemImage: "arrow.clockwise")
                     }
+                    .buttonStyle(.bordered)
+
+                    Button(action: exportCSV) {
+                        Label("Export CSV", systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Spacer()
+
+                    // Quota type selector
+                    Picker("Quota", selection: $selectedQuotaType) {
+                        ForEach(QuotaType.allCases, id: \.self) { qt in
+                            Text(qt.displayName).tag(qt)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 120)
                 }
-                .pickerStyle(.menu)
-                .frame(width: 120)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+            .frame(minWidth: geometry.size.width, minHeight: geometry.size.height)
         }
-        .padding(.top)
+        .frame(minWidth: 430, minHeight: 480)
         .onAppear {
             selectedQuotaType = QuotaType(rawValue: SettingsHelper.quotaType.rawValue) ?? .fiveHour
             loadData()
@@ -90,7 +99,7 @@ struct StatisticsTabView: View {
         isLoading = true
         DispatchQueue.global().async {
             let data: [UsageSnapshot]
-            switch selectedTimeframe {
+            switch self.selectedTimeframe {
             case .sevenDays:
                 data = HistoryStorage.shared.loadSnapshots7d()
             case .thirtyDays:

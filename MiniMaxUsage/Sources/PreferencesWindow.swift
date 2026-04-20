@@ -59,14 +59,19 @@ class PreferencesWindow: NSWindowController {
         tabViewController.addTabViewItem(preferencesTab)
 
         // Statistics tab
-        let statisticsTab = NSTabViewItem(viewController: NSViewController())
+        let statisticsVC = NSViewController()
+        statisticsVC.title = "Statistics"
+        statisticsVC.view = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 480))
+        statisticsVC.view.autoresizingMask = [.width, .height]
+        let statisticsTab = NSTabViewItem(viewController: statisticsVC)
         statisticsTab.label = "Statistics"
         statisticsTab.image = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "Statistics")
 
         if #available(macOS 12.0, *) {
             let statisticsView = NSHostingView(rootView: StatisticsTabView())
-            statisticsView.frame = NSRect(x: 0, y: 0, width: 430, height: 480)
-            statisticsTab.view = statisticsView
+            statisticsView.frame = statisticsVC.view.bounds
+            statisticsView.autoresizingMask = [.width, .height]
+            statisticsVC.view.addSubview(statisticsView)
         } else {
             let fallbackView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 480))
             let label = NSTextField(labelWithString: "Statistics requires macOS 12 or later")
