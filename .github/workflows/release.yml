@@ -39,16 +39,17 @@ jobs:
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Get previous tag (most recent)
+          # Get previous tag (second most recent, skipping current tag)
           ALL_TAGS=$(git tag --sort=-v:refname)
-          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '1p')
+          # Get tags in order, skip current one
+          PREV_TAG=$(echo "$ALL_TAGS" | grep -v "^${TAG_NAME}$" | head -1)
 
           echo "VERSION=$VERSION"
           echo "PREV_TAG=$PREV_TAG"
 
           # Build release notes from git log
-          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG_NAME" ]; then
-            CHANGELOG=$(git log --oneline -20)
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --oneline -10)
           else
             CHANGELOG=$(git log --oneline "$PREV_TAG..$TAG_NAME")
           fi
@@ -267,8 +268,11 @@ jobs:
           PREV_TAG=$(echo "$ALL_TAGS" | sed -n '1p')
 
           # Build release notes from git log
-          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG_NAME" ]; then
-            CHANGELOG=$(git log --oneline -20)
+          ALL_TAGS=$(git tag --sort=-v:refname)
+          PREV_TAG=$(echo "$ALL_TAGS" | grep -v "^${TAG_NAME}$" | head -1)
+
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --oneline -10)
           else
             CHANGELOG=$(git log --oneline "$PREV_TAG..$TAG_NAME")
           fi
