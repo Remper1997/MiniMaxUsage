@@ -32,18 +32,45 @@ class PreferencesWindow: NSWindowController {
         self.apiService = apiService
         self.menuBarController = menuBarController
 
+        let tabViewController = NSTabViewController()
+        tabViewController.tabStyle = .toolbar
+
+        // Preferences tab (existing content)
+        let preferencesTab = NSTabViewItem(viewController: NSViewController())
+        preferencesTab.label = "Preferences"
+        preferencesTab.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Preferences")
+
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
 
-        // Content height: UI builds from bottom (y=20) to top
-        // Final element (apiTitleLabel) ends at y=705
         let contentViewHeight: CGFloat = 710
-
         let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: contentViewHeight))
         scrollView.documentView = contentView
+        preferencesTab.view = scrollView
+
+        tabViewController.addTabViewItem(preferencesTab)
+
+        // Statistics tab
+        let statisticsTab = NSTabViewItem(viewController: NSViewController())
+        statisticsTab.label = "Statistics"
+        statisticsTab.image = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "Statistics")
+
+        if #available(macOS 12.0, *) {
+            let statisticsView = NSHostingView(rootView: StatisticsTabView())
+            statisticsView.frame = NSRect(x: 0, y: 0, width: 430, height: 480)
+            statisticsTab.view = statisticsView
+        } else {
+            let fallbackView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 480))
+            let label = NSTextField(labelWithString: "Statistics requires macOS 12 or later")
+            label.frame = NSRect(x: 20, y: 220, width: 390, height: 40)
+            fallbackView.addSubview(label)
+            statisticsTab.view = fallbackView
+        }
+
+        tabViewController.addTabViewItem(statisticsTab)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 450, height: 480),
@@ -52,7 +79,7 @@ class PreferencesWindow: NSWindowController {
             defer: false
         )
         window.title = "MiniMaxUsage Preferences"
-        window.contentView = scrollView
+        window.contentViewController = tabViewController
         window.center()
         window.minSize = NSSize(width: 450, height: 400)
 
@@ -69,7 +96,9 @@ class PreferencesWindow: NSWindowController {
     }
 
     private func setupUI() {
-        guard let scrollView = window?.contentView as? NSScrollView,
+        guard let tabViewController = window?.contentViewController as? NSTabViewController,
+              let preferencesTab = tabViewController.tabViewItem(at: 0),
+              let scrollView = preferencesTab.view as? NSScrollView,
               let contentView = scrollView.documentView else { return }
 
         // Build UI from bottom to top using positive coordinates
