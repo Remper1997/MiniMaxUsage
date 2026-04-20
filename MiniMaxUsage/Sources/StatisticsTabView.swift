@@ -18,7 +18,7 @@ struct StatisticsTabView: View {
         GeometryReader { geometry in
             VStack(spacing: 12) {
                 // Summary Card
-                SummaryCardView(snapshot: mostRecentSnapshot)
+                SummaryCardView(snapshots: snapshots)
                     .padding(.horizontal)
 
                 if snapshots.isEmpty && !isLoading {
@@ -73,6 +73,12 @@ struct StatisticsTabView: View {
                     }
                     .pickerStyle(.menu)
                     .frame(width: 120)
+                    .onChange(of: selectedQuotaType) { newValue in
+                        // Default to 7 days for daily, keep current for others
+                        if newValue == .daily {
+                            selectedTimeframe = .sevenDays
+                        }
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 8)
@@ -143,7 +149,85 @@ struct StatisticsTabView: View {
 }
 
 struct SummaryCardView: View {
-    let snapshot: UsageSnapshot?
+    let snapshots: [UsageSnapshot]
+
+    private var mostRecentSnapshot: UsageSnapshot? {
+        snapshots.last
+    }
+
+    private var dailyAverageUsage: Int {
+        guard !snapshots.isEmpty else { return 0 }
+        // Group snapshots by day and take only the LAST snapshot of each day
+        // (dailyUsed is cumulative, so last snapshot of day = final total for that day)
+        let calendar = Calendar.current
+        var lastSnapshotOfDay: [Date: UsageSnapshot] = [:]
+
+        for snapshot in snapshots {
+            let dayStart = calendar.startOfDay(for: snapshot.timestamp)
+            if let existing = lastSnapshotOfDay[dayStart] {
+                if snapshot.timestamp > existing.timestamp {
+                    lastSnapshotOfDay[dayStart] = snapshot
+                }
+            } else {
+                lastSnapshotOfDay[dayStart] = snapshot
+            }
+        }
+
+        let uniqueDays = lastSnapshotOfDay.count
+        guard uniqueDays > 0 else { return 0 }
+
+        let totalUsage = lastSnapshotOfDay.values.reduce(0) { $0 + $1.dailyUsed }
+        return totalUsage / uniqueDays
+    }
+
+    private var dailyTrend: String {
+        guard snapshots.count >= 2 else { return "--" }
+        let calendar = Calendar.current
+        let now = Date()
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now)!
+        let fourteenDaysAgo = calendar.date(byAdding: .day, value: -14, to: now)!
+
+        let recentSnapshots = snapshots.filter { $0.timestamp >= sevenDaysAgo }
+        let olderSnapshots = snapshots.filter { $0.timestamp >= fourteenDaysAgo && $0.timestamp < sevenDaysAgo }
+
+        guard !recentSnapshots.isEmpty, !olderSnapshots.isEmpty else { return "--" }
+
+        let recentAvg = averageDailyUsageFromSnapshots(snapshots: recentSnapshots)
+        let olderAvg = averageDailyUsageFromSnapshots(snapshots: olderSnapshots)
+
+        guard olderAvg > 0 else { return "--" }
+
+        let changePercent = Double(recentAvg - olderAvg) / Double(olderAvg) * 100
+        if changePercent > 0 {
+            return "↑ \(Int(abs(changePercent)))%"
+        } else if changePercent < 0 {
+            return "↓ \(Int(abs(changePercent)))%"
+        } else {
+            return "→ 0%"
+        }
+    }
+
+    private func averageDailyUsageFromSnapshots(snapshots: [UsageSnapshot]) -> Int {
+        let calendar = Calendar.current
+        var lastSnapshotOfDay: [Date: UsageSnapshot] = [:]
+
+        for snapshot in snapshots {
+            let dayStart = calendar.startOfDay(for: snapshot.timestamp)
+            if let existing = lastSnapshotOfDay[dayStart] {
+                if snapshot.timestamp > existing.timestamp {
+                    lastSnapshotOfDay[dayStart] = snapshot
+                }
+            } else {
+                lastSnapshotOfDay[dayStart] = snapshot
+            }
+        }
+
+        let uniqueDays = lastSnapshotOfDay.count
+        guard uniqueDays > 0 else { return 0 }
+
+        let totalUsage = lastSnapshotOfDay.values.reduce(0) { $0 + $1.dailyUsed }
+        return totalUsage / uniqueDays
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -153,7 +237,7 @@ struct SummaryCardView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
 
-                if let snapshot = snapshot {
+                if let snapshot = mostRecentSnapshot {
                     HStack(spacing: 4) {
                         statusIcon(for: snapshot.dailyUsedPercent)
                         Text("\(Int(snapshot.dailyUsedPercent * 100))%")
@@ -162,9 +246,14 @@ struct SummaryCardView: View {
                     Text("\(snapshot.dailyUsed)/\(snapshot.dailyBudget)")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
-                    Text("Budget: \(formatNumber(snapshot.dailyBudget))")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 8) {
+                        Text("Avg: \(formatNumber(dailyAverageUsage))/day")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text(dailyTrend)
+                            .font(.system(size: 10))
+                            .foregroundColor(dailyTrend.contains("↑") ? .red : (dailyTrend.contains("↓") ? .green : .secondary))
+                    }
                 } else {
                     Text("--")
                         .font(.system(size: 18, weight: .semibold))
@@ -182,7 +271,7 @@ struct SummaryCardView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
 
-                if let snapshot = snapshot {
+                if let snapshot = mostRecentSnapshot {
                     HStack(spacing: 4) {
                         statusIcon(for: snapshot.weeklyUsedPercent)
                         Text("\(Int(snapshot.weeklyUsedPercent * 100))%")
@@ -225,7 +314,7 @@ struct SummaryCardView: View {
     }
 
     private var daysUntilWeeklyReset: String {
-        guard let snapshot = snapshot else { return "--" }
+        guard let snapshot = mostRecentSnapshot else { return "--" }
         // Estimate days until reset based on weekly usage
         let weeklyTotal = snapshot.weeklyUsed + (snapshot.dailyBudget * 7)
         if weeklyTotal > 0 {
@@ -249,9 +338,32 @@ struct UsageChartView: View {
     let selectedQuotaType: QuotaType
     let selectedTimeframe: StatisticsTabView.Timeframe
 
+    // For daily: show only the peak (maximum) of each day
+    private var displaySnapshots: [UsageSnapshot] {
+        if selectedQuotaType != .daily {
+            return snapshots
+        }
+
+        let calendar = Calendar.current
+        var peakOfDay: [Date: UsageSnapshot] = [:]
+
+        for snapshot in snapshots {
+            let dayStart = calendar.startOfDay(for: snapshot.timestamp)
+            if let existing = peakOfDay[dayStart] {
+                if snapshot.dailyUsed > existing.dailyUsed {
+                    peakOfDay[dayStart] = snapshot
+                }
+            } else {
+                peakOfDay[dayStart] = snapshot
+            }
+        }
+
+        return peakOfDay.values.sorted { $0.timestamp < $1.timestamp }
+    }
+
     var body: some View {
         Chart {
-            ForEach(snapshots, id: \.timestamp) { snapshot in
+            ForEach(displaySnapshots, id: \.timestamp) { snapshot in
                 LineMark(
                     x: .value("Date", snapshot.timestamp),
                     y: .value("Used", usageFor(snapshot))
@@ -259,9 +371,10 @@ struct UsageChartView: View {
                 .foregroundStyle(colorForUsage(snapshot))
 
                 if selectedQuotaType == .daily {
+                    // Budget line at 100%
                     LineMark(
                         x: .value("Date", snapshot.timestamp),
-                        y: .value("Budget", snapshot.dailyBudget)
+                        y: .value("Budget", 100)
                     )
                     .foregroundStyle(.gray.opacity(0.5))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
@@ -275,21 +388,30 @@ struct UsageChartView: View {
             }
         }
         .chartYAxis {
-            AxisMarks { _ in
+            AxisMarks { value in
                 AxisGridLine()
-                AxisValueLabel()
+                if selectedQuotaType == .daily {
+                    if let doubleValue = value.as(Double.self) {
+                        AxisValueLabel {
+                            Text("\(Int(doubleValue))%")
+                        }
+                    }
+                } else {
+                    AxisValueLabel()
+                }
             }
         }
+        .chartYScale(domain: selectedQuotaType == .daily ? 0...150 : 0...5000)
     }
 
-    private func usageFor(_ snapshot: UsageSnapshot) -> Int {
+    private func usageFor(_ snapshot: UsageSnapshot) -> Double {
         switch selectedQuotaType {
         case .fiveHour:
-            return snapshot.fiveHourUsed
+            return Double(snapshot.fiveHourUsed)
         case .weekly:
-            return snapshot.weeklyUsed
+            return Double(snapshot.weeklyUsed)
         case .daily:
-            return snapshot.dailyUsed
+            return snapshot.dailyUsedPercent * 100  // Return as percentage 0-100+
         }
     }
 
