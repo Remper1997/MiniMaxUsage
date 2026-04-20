@@ -23,7 +23,15 @@ class NotificationHelper {
     private var previousDailyPercent: Double = 0
     private var previousResetTimes: [Int: Int] = [:]  // quota type -> previous reset time ms
 
-    private init() {}
+    // UserDefaults keys for persisted reset detection
+    private static let previousFiveHourResetTimeKey = "previousFiveHourResetTime"
+    private static let previousWeeklyResetTimeKey = "previousWeeklyResetTime"
+
+    private init() {
+        // Load persisted reset times from UserDefaults
+        previousResetTimes[0] = UserDefaults.standard.integer(forKey: Self.previousFiveHourResetTimeKey)
+        previousResetTimes[1] = UserDefaults.standard.integer(forKey: Self.previousWeeklyResetTimeKey)
+    }
 
     // MARK: - Preference Accessors
 
@@ -152,6 +160,7 @@ class NotificationHelper {
             }
         }
         previousResetTimes[0] = currentResetTime
+        UserDefaults.standard.set(currentResetTime, forKey: Self.previousFiveHourResetTimeKey)
 
         let currentWeeklyResetTime = modelRemain.weeklyRemainsTime
         let previousWeeklyResetTime = previousResetTimes[1] ?? 0
@@ -161,6 +170,7 @@ class NotificationHelper {
             }
         }
         previousResetTimes[1] = currentWeeklyResetTime
+        UserDefaults.standard.set(currentWeeklyResetTime, forKey: Self.previousWeeklyResetTimeKey)
 
         // Daily budget exceeded check
         if dailyTracking != nil && (dailyTracking?.todayUsage ?? 0) > (dailyTracking?.dailyBudget ?? 0) {
@@ -175,7 +185,7 @@ class NotificationHelper {
 
         // Crossed from below to above warning
         if previousPercent < currentThreshold && newPercent >= currentThreshold {
-            if isDaily ? Self.notifyWarningEnabled : Self.notifyWarningEnabled {
+            if Self.notifyWarningEnabled {
                 sendNotification(
                     title: "Warning",
                     body: "MiniMaxUsage: \(quotaName) at \(Int(newPercent * 100))% — approaching limit"
@@ -185,7 +195,7 @@ class NotificationHelper {
 
         // Crossed from below to above critical
         if previousPercent < criticalThreshold && newPercent >= criticalThreshold {
-            if isDaily ? Self.notifyCriticalEnabled : Self.notifyCriticalEnabled {
+            if Self.notifyCriticalEnabled {
                 sendNotification(
                     title: "Critical",
                     body: "MiniMaxUsage: \(quotaName) at \(Int(newPercent * 100))% — critical!"

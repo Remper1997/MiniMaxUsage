@@ -28,7 +28,7 @@ struct StatisticsTabView: View {
 
             // Chart
             if #available(macOS 13.0, *) {
-                UsageChartView(snapshots: snapshots, selectedQuotaType: selectedQuotaType)
+                UsageChartView(snapshots: snapshots, selectedQuotaType: selectedQuotaType, selectedTimeframe: selectedTimeframe)
                     .frame(minHeight: 200)
                     .padding(.horizontal)
             } else {
@@ -67,6 +67,7 @@ struct StatisticsTabView: View {
 struct UsageChartView: View {
     let snapshots: [UsageSnapshot]
     let selectedQuotaType: QuotaType
+    let selectedTimeframe: StatisticsTabView.Timeframe
 
     var body: some View {
         Chart {
@@ -88,7 +89,7 @@ struct UsageChartView: View {
             }
         }
         .chartXAxis {
-            AxisMarks(values: .stride(by: .day, count: selectedQuotaType == .sevenDays ? 1 : 7)) { value in
+            AxisMarks(values: .stride(by: .day, count: selectedTimeframe == .sevenDays ? 1 : 7)) { value in
                 AxisGridLine()
                 AxisValueLabel(format: .dateTime.day().month())
             }

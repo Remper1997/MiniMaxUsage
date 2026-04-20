@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import SwiftUI
 
 class PreferencesWindow: NSWindowController {
     private var apiService: ApiService
@@ -96,9 +97,9 @@ class PreferencesWindow: NSWindowController {
     }
 
     private func setupUI() {
-        guard let tabViewController = window?.contentViewController as? NSTabViewController,
-              let preferencesTab = tabViewController.tabViewItem(at: 0),
-              let scrollView = preferencesTab.view as? NSScrollView,
+        guard let tabViewController = window?.contentViewController as? NSTabViewController else { return }
+        let preferencesTab = tabViewController.tabView.tabViewItem(at: 0)
+        guard let scrollView = preferencesTab.view as? NSScrollView,
               let contentView = scrollView.documentView else { return }
 
         // Build UI from bottom to top using positive coordinates
@@ -438,9 +439,9 @@ class PreferencesWindow: NSWindowController {
     }
 
     private func updateWarningLabel() {
-        guard let tabViewController = window?.contentViewController as? NSTabViewController,
-              let preferencesTab = tabViewController.tabViewItem(at: 0),
-              let scrollView = preferencesTab.view as? NSScrollView,
+        guard let tabViewController = window?.contentViewController as? NSTabViewController else { return }
+        let preferencesTab = tabViewController.tabView.tabViewItem(at: 0)
+        guard let scrollView = preferencesTab.view as? NSScrollView,
               let contentView = scrollView.documentView else { return }
         if let label = contentView.viewWithTag(101) as? NSTextField {
             label.stringValue = "\(Int(NotificationHelper.warningThreshold * 100))%"
@@ -448,9 +449,9 @@ class PreferencesWindow: NSWindowController {
     }
 
     private func updateCriticalLabel() {
-        guard let tabViewController = window?.contentViewController as? NSTabViewController,
-              let preferencesTab = tabViewController.tabViewItem(at: 0),
-              let scrollView = preferencesTab.view as? NSScrollView,
+        guard let tabViewController = window?.contentViewController as? NSTabViewController else { return }
+        let preferencesTab = tabViewController.tabView.tabViewItem(at: 0)
+        guard let scrollView = preferencesTab.view as? NSScrollView,
               let contentView = scrollView.documentView else { return }
         if let label = contentView.viewWithTag(103) as? NSTextField {
             label.stringValue = "\(Int(NotificationHelper.criticalThreshold * 100))%"

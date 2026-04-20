@@ -107,7 +107,7 @@ class MenuBarController: NSObject {
                         self.currentUsage = usage
 
                         // Extract m2 for use in notification and snapshot (also sets currentDailyTracking)
-                        let m2 = usage.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") })
+                        guard let m2 = usage.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") }) else { return }
                         self.updateDisplay(usage: usage)
 
                         // Check and send notifications if needed
