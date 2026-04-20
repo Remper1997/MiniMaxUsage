@@ -23,6 +23,8 @@ class MenuBarController: NSObject {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
 
+        NotificationHelper.shared.requestAuthorization()
+
         setupRetryCallback()
         setupMenu()
         setupSettingsObserver()
@@ -103,7 +105,21 @@ class MenuBarController: NSObject {
                     // Skip UI update if data hasn't meaningfully changed
                     if self.shouldUpdateDisplay(newUsage: usage) {
                         self.currentUsage = usage
+
+                        // Extract m2 for use in notification and snapshot (also sets currentDailyTracking)
+                        let m2 = usage.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") })
                         self.updateDisplay(usage: usage)
+
+                        // Check and send notifications if needed
+                        NotificationHelper.shared.checkAndNotify(
+                            modelRemain: m2,
+                            dailyTracking: currentDailyTracking,
+                            currentQuotaType: SettingsHelper.quotaType
+                        )
+
+                        // Save usage snapshot for history charts
+                        let snapshot = UsageSnapshot(from: m2, dailyTracking: currentDailyTracking, currentQuotaType: SettingsHelper.quotaType)
+                        HistoryStorage.shared.saveSnapshot(snapshot)
                     }
                 }
             } catch {
