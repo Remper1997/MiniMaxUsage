@@ -23,6 +23,8 @@ class MenuBarController: NSObject {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
 
+        NotificationHelper.shared.requestAuthorization()
+
         setupRetryCallback()
         setupMenu()
         setupSettingsObserver()
@@ -103,7 +105,21 @@ class MenuBarController: NSObject {
                     // Skip UI update if data hasn't meaningfully changed
                     if self.shouldUpdateDisplay(newUsage: usage) {
                         self.currentUsage = usage
+
+                        // Extract m2 for use in notification and snapshot (also sets currentDailyTracking)
+                        guard let m2 = usage.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") }) else { return }
                         self.updateDisplay(usage: usage)
+
+                        // Check and send notifications if needed
+                        NotificationHelper.shared.checkAndNotify(
+                            modelRemain: m2,
+                            dailyTracking: currentDailyTracking,
+                            currentQuotaType: SettingsHelper.quotaType
+                        )
+
+                        // Save usage snapshot for history charts
+                        let snapshot = UsageSnapshot(from: m2, dailyTracking: currentDailyTracking, currentQuotaType: SettingsHelper.quotaType)
+                        HistoryStorage.shared.saveSnapshot(snapshot)
                     }
                 }
             } catch {
@@ -136,11 +152,6 @@ class MenuBarController: NSObject {
             return
         }
 
-        // DEBUG: Log API values
-        print("DEBUG: weeklyRemainsTime = \(m2.weeklyRemainsTime) ms")
-        print("DEBUG: currentWeeklyUsageCount = \(m2.currentWeeklyUsageCount)")
-        print("DEBUG: currentWeeklyTotalCount = \(m2.currentWeeklyTotalCount)")
-
         // Get quota info based on selected type
         let quotaInfo: QuotaInfo
 
@@ -157,14 +168,6 @@ class MenuBarController: NSObject {
                 dailyBudget: tracking.dailyBudget,
                 weeklyRemainsTimeMs: m2.weeklyRemainsTime
             )
-
-            // DEBUG: Log daily tracking values
-            print("DEBUG DAILY: todayUsage = \(tracking.todayUsage)")
-            print("DEBUG DAILY: dailyBudget = \(tracking.dailyBudget)")
-            print("DEBUG DAILY: daysRemaining = \(tracking.daysRemaining)")
-            print("DEBUG DAILY: quotaInfo.used = \(quotaInfo.used)")
-            print("DEBUG DAILY: quotaInfo.total = \(quotaInfo.total)")
-            print("DEBUG DAILY: quotaInfo.usedPercent = \(quotaInfo.usedPercent)")
         } else {
             quotaInfo = m2.quotaInfo(for: SettingsHelper.quotaType)
         }

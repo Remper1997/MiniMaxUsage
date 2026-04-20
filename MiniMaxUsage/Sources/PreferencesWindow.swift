@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import SwiftUI
 
 class PreferencesWindow: NSWindowController {
     private var apiService: ApiService
@@ -17,6 +18,8 @@ class PreferencesWindow: NSWindowController {
     private var autoUpdateCheckbox: NSButton!
     private var lastCheckedLabel: NSTextField!
     private var checkNowButton: NSButton!
+    private var warningSlider: NSSlider!
+    private var criticalSlider: NSSlider!
 
     private let refreshOptions: [(String, TimeInterval)] = [
         ("30 seconds", 30),
@@ -32,18 +35,52 @@ class PreferencesWindow: NSWindowController {
         self.apiService = apiService
         self.menuBarController = menuBarController
 
+        let tabViewController = NSTabViewController()
+        tabViewController.tabStyle = .toolbar
+
+        // Preferences tab (existing content)
+        let preferencesVC = NSViewController()
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.autoresizingMask = [.width, .height]
 
-        // Content height: UI builds from bottom (y=20) to top
-        // Final element (apiTitleLabel) ends at y=705
-        let contentViewHeight: CGFloat = 710
-
+        let contentViewHeight: CGFloat = 925
         let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: contentViewHeight))
+        contentView.autoresizingMask = [.width]
         scrollView.documentView = contentView
+        preferencesVC.view = scrollView
+        let preferencesTab = NSTabViewItem(viewController: preferencesVC)
+        preferencesTab.label = "Preferences"
+        preferencesTab.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Preferences")
+
+        tabViewController.addTabViewItem(preferencesTab)
+
+        // Statistics tab
+        let statisticsVC = NSViewController()
+        statisticsVC.title = "Statistics"
+        statisticsVC.view = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 480))
+        statisticsVC.view.autoresizingMask = [.width, .height]
+        let statisticsTab = NSTabViewItem(viewController: statisticsVC)
+        statisticsTab.label = "Statistics"
+        statisticsTab.image = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "Statistics")
+
+        if #available(macOS 12.0, *) {
+            let statisticsView = NSHostingView(rootView: StatisticsTabView())
+            statisticsView.frame = statisticsVC.view.bounds
+            statisticsView.autoresizingMask = [.width, .height]
+            statisticsVC.view.addSubview(statisticsView)
+        } else {
+            let fallbackView = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 480))
+            let label = NSTextField(labelWithString: "Statistics requires macOS 12 or later")
+            label.frame = NSRect(x: 20, y: 220, width: 390, height: 40)
+            fallbackView.addSubview(label)
+            statisticsTab.view = fallbackView
+        }
+
+        tabViewController.addTabViewItem(statisticsTab)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 450, height: 480),
@@ -52,13 +89,14 @@ class PreferencesWindow: NSWindowController {
             defer: false
         )
         window.title = "MiniMaxUsage Preferences"
-        window.contentView = scrollView
+        window.contentViewController = tabViewController
         window.center()
         window.minSize = NSSize(width: 450, height: 400)
 
         super.init(window: window)
 
         setupUI()
+
         loadExistingAPIKey()
         loadRefreshInterval()
         loadDisplaySettings()
@@ -69,8 +107,14 @@ class PreferencesWindow: NSWindowController {
     }
 
     private func setupUI() {
-        guard let scrollView = window?.contentView as? NSScrollView,
-              let contentView = scrollView.documentView else { return }
+        guard let tabViewController = window?.contentViewController as? NSTabViewController else {
+            return
+        }
+        let preferencesTab = tabViewController.tabView.tabViewItem(at: 0)
+        guard let scrollView = preferencesTab.view as? NSScrollView,
+              let contentView = scrollView.documentView else {
+            return
+        }
 
         // Build UI from bottom to top using positive coordinates
         var yPosition: CGFloat = 20
@@ -103,6 +147,76 @@ class PreferencesWindow: NSWindowController {
         let separatorLine4 = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
         separatorLine4.boxType = .separator
         contentView.addSubview(separatorLine4)
+
+        // === Notifications Section ===
+        yPosition += 30
+        let notifyTitleLabel = NSTextField(labelWithString: "Notifications")
+        notifyTitleLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        notifyTitleLabel.frame = NSRect(x: 20, y: yPosition, width: 200, height: 20)
+        contentView.addSubview(notifyTitleLabel)
+
+        yPosition += 30
+        let separatorNotify = NSBox(frame: NSRect(x: 20, y: yPosition, width: 410, height: 1))
+        separatorNotify.boxType = .separator
+        contentView.addSubview(separatorNotify)
+
+        yPosition += 30
+        // Warning threshold slider
+        let warningLabel = NSTextField(labelWithString: "Warning threshold:")
+        warningLabel.frame = NSRect(x: 20, y: yPosition, width: 120, height: 20)
+        contentView.addSubview(warningLabel)
+
+        let warningSlider = NSSlider(value: NotificationHelper.warningThreshold * 100, minValue: 10, maxValue: Double(NotificationHelper.criticalThreshold * 100) - 1, target: self, action: #selector(warningSliderChanged))
+        warningSlider.frame = NSRect(x: 140, y: yPosition, width: 200, height: 20)
+        warningSlider.tag = 100
+        contentView.addSubview(warningSlider)
+        self.warningSlider = warningSlider
+
+        let warningValueLabel = NSTextField(labelWithString: "\(Int(NotificationHelper.warningThreshold * 100))%")
+        warningValueLabel.frame = NSRect(x: 350, y: yPosition, width: 50, height: 20)
+        warningValueLabel.tag = 101
+        contentView.addSubview(warningValueLabel)
+
+        yPosition += 25
+        // Critical threshold slider
+        let criticalLabel = NSTextField(labelWithString: "Critical threshold:")
+        criticalLabel.frame = NSRect(x: 20, y: yPosition, width: 120, height: 20)
+        contentView.addSubview(criticalLabel)
+
+        let criticalSlider = NSSlider(value: NotificationHelper.criticalThreshold * 100, minValue: 50, maxValue: 100, target: self, action: #selector(criticalSliderChanged))
+        criticalSlider.frame = NSRect(x: 140, y: yPosition, width: 200, height: 20)
+        criticalSlider.tag = 102
+        contentView.addSubview(criticalSlider)
+
+        let criticalValueLabel = NSTextField(labelWithString: "\(Int(NotificationHelper.criticalThreshold * 100))%")
+        criticalValueLabel.frame = NSRect(x: 350, y: yPosition, width: 50, height: 20)
+        criticalValueLabel.tag = 103
+        contentView.addSubview(criticalValueLabel)
+
+        yPosition += 25
+        // Notification type toggles
+        let notifyWarningCheckbox = NSButton(checkboxWithTitle: "Warning threshold notifications", target: self, action: #selector(notifyWarningChanged))
+        notifyWarningCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        notifyWarningCheckbox.state = NotificationHelper.notifyWarningEnabled ? .on : .off
+        contentView.addSubview(notifyWarningCheckbox)
+
+        yPosition += 25
+        let notifyCriticalCheckbox = NSButton(checkboxWithTitle: "Critical threshold notifications", target: self, action: #selector(notifyCriticalChanged))
+        notifyCriticalCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        notifyCriticalCheckbox.state = NotificationHelper.notifyCriticalEnabled ? .on : .off
+        contentView.addSubview(notifyCriticalCheckbox)
+
+        yPosition += 25
+        let notifyResetCheckbox = NSButton(checkboxWithTitle: "Quota reset notifications", target: self, action: #selector(notifyResetChanged))
+        notifyResetCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        notifyResetCheckbox.state = NotificationHelper.notifyResetEnabled ? .on : .off
+        contentView.addSubview(notifyResetCheckbox)
+
+        yPosition += 25
+        let notifyDailyBudgetCheckbox = NSButton(checkboxWithTitle: "Daily budget exceeded notifications", target: self, action: #selector(notifyDailyBudgetChanged))
+        notifyDailyBudgetCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
+        notifyDailyBudgetCheckbox.state = NotificationHelper.notifyDailyBudgetEnabled ? .on : .off
+        contentView.addSubview(notifyDailyBudgetCheckbox)
 
         yPosition += 30
         refreshPopup = NSPopUpButton(frame: NSRect(x: 20, y: yPosition, width: 200, height: 25))
@@ -311,6 +425,68 @@ class PreferencesWindow: NSWindowController {
         NotificationCenter.default.post(name: .checkForUpdates, object: nil)
         SettingsHelper.lastUpdateCheck = Date()
         lastCheckedLabel.stringValue = "Last checked: Just now"
+    }
+
+    @objc private func warningSliderChanged(_ sender: NSSlider) {
+        NotificationHelper.warningThreshold = sender.doubleValue / 100.0
+        updateWarningLabel()
+        // Ensure warning doesn't exceed critical
+        if let critical = criticalSlider, sender.doubleValue >= critical.doubleValue {
+            critical.doubleValue = min(sender.doubleValue + 1, 99)
+            NotificationHelper.criticalThreshold = critical.doubleValue / 100.0
+            updateCriticalLabel()
+        }
+    }
+
+    @objc private func criticalSliderChanged(_ sender: NSSlider) {
+        NotificationHelper.criticalThreshold = sender.doubleValue / 100.0
+        updateCriticalLabel()
+        // Ensure critical is always above warning
+        if let warning = warningSlider, sender.doubleValue <= warning.doubleValue {
+            warning.doubleValue = max(sender.doubleValue - 1, 10)
+            NotificationHelper.warningThreshold = warning.doubleValue / 100.0
+            updateWarningLabel()
+        }
+        // Update warning slider's max to be just below critical
+        if let warning = warningSlider {
+            warning.maxValue = sender.doubleValue - 1
+        }
+    }
+
+    @objc private func notifyWarningChanged(_ sender: NSButton) {
+        NotificationHelper.notifyWarningEnabled = sender.state == .on
+    }
+
+    @objc private func notifyCriticalChanged(_ sender: NSButton) {
+        NotificationHelper.notifyCriticalEnabled = sender.state == .on
+    }
+
+    @objc private func notifyResetChanged(_ sender: NSButton) {
+        NotificationHelper.notifyResetEnabled = sender.state == .on
+    }
+
+    @objc private func notifyDailyBudgetChanged(_ sender: NSButton) {
+        NotificationHelper.notifyDailyBudgetEnabled = sender.state == .on
+    }
+
+    private func updateWarningLabel() {
+        guard let tabViewController = window?.contentViewController as? NSTabViewController else { return }
+        let preferencesTab = tabViewController.tabView.tabViewItem(at: 0)
+        guard let scrollView = preferencesTab.view as? NSScrollView,
+              let contentView = scrollView.documentView else { return }
+        if let label = contentView.viewWithTag(101) as? NSTextField {
+            label.stringValue = "\(Int(NotificationHelper.warningThreshold * 100))%"
+        }
+    }
+
+    private func updateCriticalLabel() {
+        guard let tabViewController = window?.contentViewController as? NSTabViewController else { return }
+        let preferencesTab = tabViewController.tabView.tabViewItem(at: 0)
+        guard let scrollView = preferencesTab.view as? NSScrollView,
+              let contentView = scrollView.documentView else { return }
+        if let label = contentView.viewWithTag(103) as? NSTextField {
+            label.stringValue = "\(Int(NotificationHelper.criticalThreshold * 100))%"
+        }
     }
 
     @objc private func refreshIntervalChanged() {
