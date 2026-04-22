@@ -6,15 +6,17 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 1.7.0</title>
-    <sparkle:version>56</sparkle:version>
-    <sparkle:shortVersionString>1.7.0</sparkle:shortVersionString>
+    <title>Version 1.7.1</title>
+    <sparkle:version>57</sparkle:version>
+    <sparkle:shortVersionString>1.7.1</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v1.7.0
+## MiniMaxUsage v1.7.1
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
+04bf172 Fix timezone issue causing incorrect day boundaries in daily tracking
+55cdf11 Update appcast.xml for v1.7.0
 db9ec88 Merge pull request #2 from Remper1997/feature/StatisticsTab
 02fae55 Improve Statistics tab daily view
 9a34b58 Fix Statistics tab rendering in Preferences window
@@ -83,8 +85,8 @@ e677111 feat: add launchAtLogin setting to SettingsHelper
 5495068 Use --notes-file instead of --notes for gh release create
 b9ec941 Fix: Remove duplicate 'v' in title and update Node.js to 24
     ]]></description>
-    <pubDate>Mon, 20 Apr 2026 22:45:11 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.7.0/MiniMaxUsage.dmg" sparkle:version="56" sparkle:shortVersionString="1.7.0" type="application/octet-stream" />
+    <pubDate>Wed, 22 Apr 2026 07:38:02 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.7.1/MiniMaxUsage.dmg" sparkle:version="57" sparkle:shortVersionString="1.7.1" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
