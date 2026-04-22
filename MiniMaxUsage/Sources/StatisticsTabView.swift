@@ -155,11 +155,18 @@ struct SummaryCardView: View {
         snapshots.last
     }
 
+    // Use UTC timezone to avoid day boundary issues with local time
+    private var utcCalendar: Calendar {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }
+
     private var dailyAverageUsage: Int {
         guard !snapshots.isEmpty else { return 0 }
         // Group snapshots by day and take only the LAST snapshot of each day
         // (dailyUsed is cumulative, so last snapshot of day = final total for that day)
-        let calendar = Calendar.current
+        let calendar = utcCalendar
         var lastSnapshotOfDay: [Date: UsageSnapshot] = [:]
 
         for snapshot in snapshots {
@@ -182,7 +189,7 @@ struct SummaryCardView: View {
 
     private var dailyTrend: String {
         guard snapshots.count >= 2 else { return "--" }
-        let calendar = Calendar.current
+        let calendar = utcCalendar
         let now = Date()
         let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now)!
         let fourteenDaysAgo = calendar.date(byAdding: .day, value: -14, to: now)!
@@ -208,7 +215,7 @@ struct SummaryCardView: View {
     }
 
     private func averageDailyUsageFromSnapshots(snapshots: [UsageSnapshot]) -> Int {
-        let calendar = Calendar.current
+        let calendar = utcCalendar
         var lastSnapshotOfDay: [Date: UsageSnapshot] = [:]
 
         for snapshot in snapshots {
@@ -344,7 +351,8 @@ struct UsageChartView: View {
             return snapshots
         }
 
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(identifier: "UTC")!
         var peakOfDay: [Date: UsageSnapshot] = [:]
 
         for snapshot in snapshots {

@@ -196,7 +196,9 @@ class SettingsHelper {
     // Budget is calculated once at start of day and stays fixed
     // Pass weeklyRemainsTime (in ms) for accurate days calculation
     static func updateDailyTracking(currentWeeklyRemaining: Int, weeklyRemainsTimeMs: Int) -> DailyTrackingData {
-        let calendar = Calendar.current
+        // Use UTC timezone to avoid day boundary issues with local time
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(identifier: "UTC")!
         let today = calendar.startOfDay(for: Date())
 
         // Check schema version - if mismatch, reset tracking
