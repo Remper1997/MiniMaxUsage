@@ -6,87 +6,22 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 1.7.1</title>
-    <sparkle:version>57</sparkle:version>
-    <sparkle:shortVersionString>1.7.1</sparkle:shortVersionString>
+    <title>Version 2.0.0</title>
+    <sparkle:version>58</sparkle:version>
+    <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v1.7.1
+## MiniMaxUsage v2.0.0
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
-04bf172 Fix timezone issue causing incorrect day boundaries in daily tracking
-55cdf11 Update appcast.xml for v1.7.0
-db9ec88 Merge pull request #2 from Remper1997/feature/StatisticsTab
-02fae55 Improve Statistics tab daily view
-9a34b58 Fix Statistics tab rendering in Preferences window
-f5e3a0d Fix tab view rendering issue when switching tabs
-b6d8ee4 Fix notification and statistics tab issues
-a9087b4 fix: correct redundant ternary and persist reset detection state
-7333d4c feat: add notification threshold sliders and toggles to Preferences
-5fc5237 feat: wire notifications and history snapshots into refresh flow
-51ae77d feat: convert PreferencesWindow to tabbed interface with Statistics tab
-44fb641 feat: add SwiftUI StatisticsTabView with charts
-cd67ab5 feat: add HistoryStorage for usage snapshot persistence
-814cf4d feat: add NotificationHelper for threshold-based notifications
-fa2b5dd feat: add UsageSnapshot model for history tracking
-5d310df feat: add phase 1 design for notifications and statistics tab
-e8da504 fix: improve release notes to show only commits since last tag
-9ca9b32 Update appcast.xml for v1.6.3
-dad8ebc fix: improve daily budget calculation and add schema version
-370370f chore: add .superpowers to gitignore
-55115f5 Update appcast.xml for v1.6.2
-88c4322 Merge pull request #1 from Remper1997/feature/glass-effect-menu-button
-d7f3f68 feat: add glass glow effect to menu bar button
-2091316 fix: include git changelog in release notes
-5ebc0eb Update appcast.xml for v1.6.1
-acaa29e feat: add retry logic to API service with 5 attempts and 15s delay
-07e31ed feat: show yellow retry indicator in menu bar during API retries
-b31dc81 feat: add retry logic to API service with 5 attempts and 15s delay
-7b08576 chore: remove docs/ from git tracking (local planning files)
-4ae80b4 chore: remove dmg_root from git tracking (build artifact)
-2675751 chore: remove docs/ from git tracking and add to gitignore
-7e64e52 chore: remove tracked DMG file (releases are on GitHub)
-eb6baf8 docs: Move screenshots to Screenshot/ folder and update README paths
-3c07310 chore: ignore Screenshot/ directory (source files)
-fd7a237 docs: Add screenshots to README
-b052f73 Update appcast.xml for v1.6.0
-2a39e46 chore: consolidate appcast updates for releases
-270a507 Fix: remove persist-credentials to allow git push
-6141b79 Use two jobs: update-appcast (main) then build (tag) with needs dependency
-4443101 Split workflow: separate checkouts for appcast (main) and build (tag)
-8e6a0e6 Update appcast.xml for v1.5.2
-dee51d3 Fix: push to main using HEAD:refs/heads/main to handle detached HEAD
-7b3bf42 Rewrite appcast generation to use printf instead of heredoc/sed
-b3234f0 Fix YAML syntax error - replace heredoc with printf to avoid <?xml being parsed as YAML header
-1b4757a feat: Implement appcast.xml-based update system with proper version tracking
-eaaed5c fix: properly update CFBundleVersion for Sparkle comparison using PlistBuddy
-b80b5c6 feat: auto-set version from git tag in Info.plist before build
-169ad9b fix: correct Atom feed URL for Sparkle
-9631d9c chore: update Sparkle feed URL and version for update testing
-040e6a4 debug: list identities after import
-b75f374 fix: add key partition list for code signing
-d5f9e35 fix: remove smartcard check from certificate import
-b5bd33a fix: use env vars instead of vars for certificate check
-a32255a fix: show only commits since last release in release notes and add Developer ID signing config
-bb8f554 feat: add Check for Updates menu item and fix scroll bug in Preferences
-b67dc24 chore: add Sparkle Info.plist configuration
-d8b38b4 feat: add Updates section to PreferencesWindow
-ddf00ae feat: initialize Sparkle updater in AppDelegate
-34bc50f feat: add autoUpdate settings to SettingsHelper
-398e514 feat: add UpdateController with Sparkle integration
-ae86df5 feat: add Sparkle SPM dependency for auto-update
-7ccad21 Add implementation plan for auto-update feature
-510e874 Add design spec for auto-update feature
-b1fd166 fix: improve error handling in launchAtLoginChanged with user feedback
-e677111 feat: add launchAtLogin setting to SettingsHelper
-2260167 Add design spec for auto-launch at login feature
-1dc0066 Update actions/checkout from v4 to v6 for Node.js 24 support
-5495068 Use --notes-file instead of --notes for gh release create
-b9ec941 Fix: Remove duplicate 'v' in title and update Node.js to 24
+bab8a65 Fix release changelog to include only commits since the previous release
+783bffb Update README for percentage-based quota API
+62ce404 Migrate to token_plan/remains API with percentage-based quotas
+c7fde28 Update appcast.xml for v1.7.1
     ]]></description>
-    <pubDate>Wed, 22 Apr 2026 07:38:02 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v1.7.1/MiniMaxUsage.dmg" sparkle:version="57" sparkle:shortVersionString="1.7.1" type="application/octet-stream" />
+    <pubDate>Fri, 05 Jun 2026 14:42:21 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v2.0.0/MiniMaxUsage.dmg" sparkle:version="58" sparkle:shortVersionString="2.0.0" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
