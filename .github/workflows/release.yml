@@ -39,10 +39,12 @@ jobs:
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Get previous tag (second most recent, skipping current tag)
-          ALL_TAGS=$(git tag --sort=-v:refname)
-          # Get tags in order, skip current one
-          PREV_TAG=$(echo "$ALL_TAGS" | grep -v "^${TAG_NAME}$" | head -1)
+          # Get the previous release tag: the nearest ancestor tag of the form
+          # vN.N.N. Using git describe follows the commit ancestry, so it always
+          # returns the real previous release instead of the globally highest tag.
+          # --match keeps only vN.N.N tags; --exclude drops pre-release (e.g.
+          # *-test*) tags. Malformed tags like "vv1.0.6" don't match either.
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude '*-*' "${TAG_NAME}^" 2>/dev/null || true)
 
           echo "VERSION=$VERSION"
           echo "PREV_TAG=$PREV_TAG"
@@ -263,14 +265,12 @@ jobs:
         run: |
           VERSION=${TAG_NAME#v}
 
-          # Get previous tag
-          ALL_TAGS=$(git tag --sort=-v:refname)
-          PREV_TAG=$(echo "$ALL_TAGS" | sed -n '1p')
+          # Get the previous release tag: the nearest ancestor tag of the form
+          # vN.N.N (see the update-appcast job for the rationale). This avoids
+          # picking the globally highest tag or a malformed/pre-release tag.
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude '*-*' "${TAG_NAME}^" 2>/dev/null || true)
 
           # Build release notes from git log
-          ALL_TAGS=$(git tag --sort=-v:refname)
-          PREV_TAG=$(echo "$ALL_TAGS" | grep -v "^${TAG_NAME}$" | head -1)
-
           if [ -z "$PREV_TAG" ]; then
             CHANGELOG=$(git log --oneline -10)
           else
