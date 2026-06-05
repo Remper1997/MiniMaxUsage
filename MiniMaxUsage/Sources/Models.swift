@@ -1,7 +1,8 @@
 import Foundation
 
-// API Response model for MiniMax usage data
-// WARNING: Field names like "UsageCount" are misleading - they actually contain REMAINING counts
+// API Response model for MiniMax usage data (token_plan/remains endpoint)
+// The new API reports remaining quota as a percentage (0–100) per window.
+// Absolute request counts are no longer provided.
 struct MiniMaxUsage: Codable {
     let modelRemains: [ModelRemain]
     let baseResp: BaseResp
@@ -12,7 +13,10 @@ struct MiniMaxUsage: Codable {
     }
 }
 
-// Unified quota information structure
+// Unified quota information structure.
+// All values are expressed in percentage terms:
+//   - 5h / weekly: total = 100, values are percentages (0–100)
+//   - daily budget: total = dailyBudgetLimit, values are weekly-percent points
 struct QuotaInfo {
     let total: Int
     let remaining: Int
@@ -23,11 +27,28 @@ struct QuotaInfo {
     // Indicates if this is a daily budget calculation (affects color thresholds)
     let isDailyBudget: Bool
 
-    // For daily budget: the calculated daily budget limit
+    // For daily budget: the calculated daily budget limit (in weekly-percent points)
     let dailyBudgetLimit: Int
 
-    // For daily budget: today's actual usage
+    // For daily budget: today's actual usage (in weekly-percent points)
     let todayUsage: Int
+
+    // True when the quota is on an unlimited / non-metered plan (API status == 3)
+    let isUnlimited: Bool
+
+    init(total: Int, remaining: Int, used: Int, usedPercent: Double,
+         resetTimeMs: Int, isDailyBudget: Bool, dailyBudgetLimit: Int,
+         todayUsage: Int, isUnlimited: Bool = false) {
+        self.total = total
+        self.remaining = remaining
+        self.used = used
+        self.usedPercent = usedPercent
+        self.resetTimeMs = resetTimeMs
+        self.isDailyBudget = isDailyBudget
+        self.dailyBudgetLimit = dailyBudgetLimit
+        self.todayUsage = todayUsage
+        self.isUnlimited = isUnlimited
+    }
 
     var formattedResetTime: String {
         let resetSeconds = resetTimeMs / 1000
@@ -42,6 +63,20 @@ struct QuotaInfo {
         }
     }
 
+    // Human-readable "used" amount for the detailed menu.
+    // Daily budget shows points/limit; percentage windows show a plain percent.
+    var usedDescription: String {
+        if isUnlimited { return "Unlimited" }
+        if isDailyBudget { return "\(used)/\(total)" }
+        return "\(used)%"
+    }
+
+    var remainingDescription: String {
+        if isUnlimited { return "∞" }
+        if isDailyBudget { return "\(remaining)/\(total)" }
+        return "\(remaining)%"
+    }
+
     // Color threshold for daily budget (80% warning, 100% exceeded)
     // For non-daily quotas, use 50%/80%
     var colorThreshold: Double {
@@ -53,73 +88,73 @@ struct QuotaInfo {
     }
 }
 
-// Individual model usage statistics
-// WARNING: Fields ending in "UsageCount" store REMAINING count, not used count
+// Individual model usage statistics from the token_plan/remains endpoint.
 struct ModelRemain: Codable {
-    // 5-hour window timing (Unix timestamp in milliseconds)
+    // 5-hour window
     let startTime: Int
     let endTime: Int
-    let remainsTime: Int
-
-    // 5-hour window quota
-    let currentIntervalTotalCount: Int
-    let currentIntervalUsageCount: Int  // Named "Usage" but is actually REMAINING
+    let remainsTime: Int                       // ms until the 5h window resets
+    let currentIntervalStatus: Int             // 1 = active/limited, 3 = unlimited/free
+    let currentIntervalRemainingPercent: Int   // remaining quota for the 5h window (0–100)
 
     // Model identifier
     let modelName: String
 
-    // Weekly quota
-    let currentWeeklyTotalCount: Int
-    let currentWeeklyUsageCount: Int  // Named "Usage" but is actually REMAINING
-
-    // Weekly window timing
+    // Weekly window
     let weeklyStartTime: Int
     let weeklyEndTime: Int
-    let weeklyRemainsTime: Int
+    let weeklyRemainsTime: Int                  // ms until the weekly window resets
+    let currentWeeklyStatus: Int               // 1 = active/limited, 3 = unlimited/free
+    let currentWeeklyRemainingPercent: Int     // remaining quota for the week (0–100)
 
     enum CodingKeys: String, CodingKey {
         case startTime = "start_time"
         case endTime = "end_time"
         case remainsTime = "remains_time"
-        case currentIntervalTotalCount = "current_interval_total_count"
-        case currentIntervalUsageCount = "current_interval_usage_count"
+        case currentIntervalStatus = "current_interval_status"
+        case currentIntervalRemainingPercent = "current_interval_remaining_percent"
         case modelName = "model_name"
-        case currentWeeklyTotalCount = "current_weekly_total_count"
-        case currentWeeklyUsageCount = "current_weekly_usage_count"
         case weeklyStartTime = "weekly_start_time"
         case weeklyEndTime = "weekly_end_time"
         case weeklyRemainsTime = "weekly_remains_time"
+        case currentWeeklyStatus = "current_weekly_status"
+        case currentWeeklyRemainingPercent = "current_weekly_remaining_percent"
     }
 
-    // Extract quota info for a given quota type
-    // Note: For .daily, use SettingsHelper.getDailyQuotaInfo() to get todayUsage
+    // API status value indicating an unlimited / non-metered plan
+    static let unlimitedStatus = 3
+
+    var isIntervalUnlimited: Bool { currentIntervalStatus == Self.unlimitedStatus }
+    var isWeeklyUnlimited: Bool { currentWeeklyStatus == Self.unlimitedStatus }
+
+    // Extract quota info for a given quota type.
+    // Note: For .daily, use SettingsHelper.getDailyQuotaInfo() to get the tracked todayUsage.
     func quotaInfo(for type: QuotaType) -> QuotaInfo {
         switch type {
         case .fiveHour:
-            let total = currentIntervalTotalCount
-            let remaining = currentIntervalUsageCount
-            let used = total - remaining
-            let usedPercent = total > 0 ? Double(used) / Double(total) : 0
-            return QuotaInfo(total: total, remaining: remaining, used: used,
+            let remaining = currentIntervalRemainingPercent
+            let used = 100 - remaining
+            let usedPercent = Double(used) / 100.0
+            return QuotaInfo(total: 100, remaining: remaining, used: used,
                            usedPercent: usedPercent, resetTimeMs: remainsTime,
-                           isDailyBudget: false, dailyBudgetLimit: 0, todayUsage: 0)
+                           isDailyBudget: false, dailyBudgetLimit: 0, todayUsage: 0,
+                           isUnlimited: isIntervalUnlimited)
         case .weekly:
-            let total = currentWeeklyTotalCount
-            let remaining = currentWeeklyUsageCount
-            let used = total - remaining
-            let usedPercent = total > 0 ? Double(used) / Double(total) : 0
-            return QuotaInfo(total: total, remaining: remaining, used: used,
+            let remaining = currentWeeklyRemainingPercent
+            let used = 100 - remaining
+            let usedPercent = Double(used) / 100.0
+            return QuotaInfo(total: 100, remaining: remaining, used: used,
                            usedPercent: usedPercent, resetTimeMs: weeklyRemainsTime,
-                           isDailyBudget: false, dailyBudgetLimit: 0, todayUsage: 0)
+                           isDailyBudget: false, dailyBudgetLimit: 0, todayUsage: 0,
+                           isUnlimited: isWeeklyUnlimited)
         case .daily:
-            // Daily budget is calculated from weekly remaining divided by days left
-            // actual todayUsage comes from SettingsHelper.getDailyTracking()
-            // This method returns the budget limit only
-            let total = currentWeeklyTotalCount
-            let remaining = currentWeeklyUsageCount
+            // Fallback daily budget = remaining weekly percentage (the real value with
+            // todayUsage comes from SettingsHelper.getDailyQuotaInfo()).
+            let remaining = currentWeeklyRemainingPercent
             return QuotaInfo(total: remaining, remaining: remaining, used: 0,
                            usedPercent: 0, resetTimeMs: weeklyRemainsTime,
-                           isDailyBudget: true, dailyBudgetLimit: remaining, todayUsage: 0)
+                           isDailyBudget: true, dailyBudgetLimit: remaining, todayUsage: 0,
+                           isUnlimited: isWeeklyUnlimited)
         }
     }
 }
@@ -135,17 +170,19 @@ struct BaseResp: Codable {
     }
 }
 
-// Usage history snapshot for Statistics tab charts
+// Usage history snapshot for Statistics tab charts.
+// All quota values are percentages (0–100); daily values are weekly-percent points.
 struct UsageSnapshot: Codable {
     let timestamp: Date
-    let fiveHourUsed: Int
-    let fiveHourTotal: Int
-    let fiveHourRemaining: Int
-    let weeklyUsed: Int
-    let weeklyTotal: Int
-    let weeklyRemaining: Int
-    let dailyUsed: Int
-    let dailyBudget: Int
+    let fiveHourUsed: Int        // percent used (0–100)
+    let fiveHourTotal: Int       // always 100
+    let fiveHourRemaining: Int   // percent remaining (0–100)
+    let weeklyUsed: Int          // percent used (0–100)
+    let weeklyTotal: Int         // always 100
+    let weeklyRemaining: Int     // percent remaining (0–100)
+    let weeklyRemainsTime: Int   // ms until the weekly window resets
+    let dailyUsed: Int           // weekly-percent points used today
+    let dailyBudget: Int         // weekly-percent points budgeted for today
     let isDailyBudgetExceeded: Bool
 
     var fiveHourUsedPercent: Double {
@@ -162,14 +199,16 @@ struct UsageSnapshot: Codable {
 
     init(from modelRemain: ModelRemain, dailyTracking: SettingsHelper.DailyTrackingData?, currentQuotaType: QuotaType) {
         self.timestamp = Date()
-        self.fiveHourUsed = modelRemain.currentIntervalTotalCount - modelRemain.currentIntervalUsageCount
-        self.fiveHourTotal = modelRemain.currentIntervalTotalCount
-        self.fiveHourRemaining = modelRemain.currentIntervalUsageCount
-        self.weeklyUsed = modelRemain.currentWeeklyTotalCount - modelRemain.currentWeeklyUsageCount
-        self.weeklyTotal = modelRemain.currentWeeklyTotalCount
-        self.weeklyRemaining = modelRemain.currentWeeklyUsageCount
+        self.fiveHourUsed = 100 - modelRemain.currentIntervalRemainingPercent
+        self.fiveHourTotal = 100
+        self.fiveHourRemaining = modelRemain.currentIntervalRemainingPercent
+        self.weeklyUsed = 100 - modelRemain.currentWeeklyRemainingPercent
+        self.weeklyTotal = 100
+        self.weeklyRemaining = modelRemain.currentWeeklyRemainingPercent
+        self.weeklyRemainsTime = modelRemain.weeklyRemainsTime
         self.dailyUsed = dailyTracking?.todayUsage ?? 0
         self.dailyBudget = dailyTracking?.dailyBudget ?? 0
-        self.isDailyBudgetExceeded = (dailyTracking?.todayUsage ?? 0) > (dailyTracking?.dailyBudget ?? 0)
+        // Only "exceeded" when there is a real (non-zero) budget to exceed.
+        self.isDailyBudgetExceeded = self.dailyBudget > 0 && self.dailyUsed > self.dailyBudget
     }
 }

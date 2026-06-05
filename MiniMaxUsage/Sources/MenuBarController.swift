@@ -90,6 +90,12 @@ class MenuBarController: NSObject {
         }
     }
 
+    // Pick the model to monitor: prefer the coding/text model ("general"),
+    // falling back to the first model the API returns.
+    private func primaryModel(in usage: MiniMaxUsage) -> ModelRemain? {
+        usage.modelRemains.first(where: { $0.modelName == "general" }) ?? usage.modelRemains.first
+    }
+
     @objc func refreshData() {
         guard let apiKey = KeychainHelper.getAPIKey() else {
             updateButton(title: "🔑 Set API Key", color: .systemOrange)
@@ -107,7 +113,7 @@ class MenuBarController: NSObject {
                         self.currentUsage = usage
 
                         // Extract m2 for use in notification and snapshot (also sets currentDailyTracking)
-                        guard let m2 = usage.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") }) else { return }
+                        guard let m2 = self.primaryModel(in: usage) else { return }
                         self.updateDisplay(usage: usage)
 
                         // Check and send notifications if needed
@@ -134,19 +140,19 @@ class MenuBarController: NSObject {
     private func shouldUpdateDisplay(newUsage: MiniMaxUsage) -> Bool {
         guard let current = currentUsage else { return true }
 
-        guard let currentModel = current.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") }),
-              let newModel = newUsage.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") }) else {
+        guard let currentModel = primaryModel(in: current),
+              let newModel = primaryModel(in: newUsage) else {
             return true
         }
 
-        return currentModel.currentIntervalUsageCount != newModel.currentIntervalUsageCount ||
-               currentModel.currentWeeklyUsageCount != newModel.currentWeeklyUsageCount ||
+        return currentModel.currentIntervalRemainingPercent != newModel.currentIntervalRemainingPercent ||
+               currentModel.currentWeeklyRemainingPercent != newModel.currentWeeklyRemainingPercent ||
                currentModel.remainsTime != newModel.remainsTime ||
                currentModel.weeklyRemainsTime != newModel.weeklyRemainsTime
     }
 
     private func updateDisplay(usage: MiniMaxUsage) {
-        guard let m2 = usage.modelRemains.first(where: { $0.modelName.contains("MiniMax-M") }) else {
+        guard let m2 = primaryModel(in: usage) else {
             updateButton(title: "❓ No data", color: .secondaryLabelColor)
             updateDetailedMenu(usage: usage, m2Usage: nil)
             return
@@ -158,7 +164,7 @@ class MenuBarController: NSObject {
         if SettingsHelper.quotaType == .daily {
             // Update daily tracking and get daily quota info
             let tracking = SettingsHelper.updateDailyTracking(
-                currentWeeklyRemaining: m2.currentWeeklyUsageCount,
+                currentWeeklyRemaining: m2.currentWeeklyRemainingPercent,
                 weeklyRemainsTimeMs: m2.weeklyRemainsTime
             )
             currentDailyTracking = tracking
@@ -172,6 +178,14 @@ class MenuBarController: NSObject {
             quotaInfo = m2.quotaInfo(for: SettingsHelper.quotaType)
         }
 
+        // Unlimited / non-metered plan: nothing to track, show an infinity marker.
+        if quotaInfo.isUnlimited {
+            let prefix = SettingsHelper.showIndicator ? "🟢 " : ""
+            updateButton(title: "\(prefix)∞", color: .systemGreen)
+            updateDetailedMenu(usage: usage, m2Usage: m2)
+            return
+        }
+
         // Determine color based on quota type (daily has different thresholds)
         let (icon, color) = colorForQuota(quotaInfo: quotaInfo, isDaily: SettingsHelper.quotaType == .daily)
 
@@ -180,9 +194,6 @@ class MenuBarController: NSObject {
         var parts: [String] = []
         if SettingsHelper.showPercent {
             parts.append(String(format: "%.0f%%", min(quotaInfo.usedPercent, 9.99) * 100))
-        }
-        if SettingsHelper.showRequests {
-            parts.append("\(quotaInfo.used)/\(quotaInfo.total)")
         }
         if SettingsHelper.showResetTime {
             parts.append(quotaInfo.formattedResetTime)
@@ -266,7 +277,7 @@ class MenuBarController: NSObject {
             let otherQuotaInfo: QuotaInfo
             if otherType == .daily {
                 let tracking = SettingsHelper.updateDailyTracking(
-                    currentWeeklyRemaining: m2.currentWeeklyUsageCount,
+                    currentWeeklyRemaining: m2.currentWeeklyRemainingPercent,
                     weeklyRemainsTimeMs: m2.weeklyRemainsTime
                 )
                 otherQuotaInfo = SettingsHelper.getDailyQuotaInfo(
@@ -291,15 +302,28 @@ class MenuBarController: NSObject {
             headerItem.isEnabled = false
             menu.insertItem(headerItem, at: insertIndex); insertIndex += 1
 
-            let usedItem = NSMenuItem(title: "Used: \(otherQuotaInfo.used)/\(otherQuotaInfo.total) (\(String(format: "%.0f%%", min(otherQuotaInfo.usedPercent, 9.99) * 100)))", action: nil, keyEquivalent: "")
-            usedItem.tag = currentTag; currentTag += 1
-            usedItem.isEnabled = false
-            menu.insertItem(usedItem, at: insertIndex); insertIndex += 1
+            if otherQuotaInfo.isUnlimited {
+                let unlimitedItem = NSMenuItem(title: "Unlimited plan (∞)", action: nil, keyEquivalent: "")
+                unlimitedItem.tag = currentTag; currentTag += 1
+                unlimitedItem.isEnabled = false
+                menu.insertItem(unlimitedItem, at: insertIndex); insertIndex += 1
+            } else {
+                let usedTitle: String
+                if otherType == .daily {
+                    usedTitle = "Used: \(otherQuotaInfo.usedDescription) (\(String(format: "%.0f%%", min(otherQuotaInfo.usedPercent, 9.99) * 100)))"
+                } else {
+                    usedTitle = "Used: \(otherQuotaInfo.usedDescription)"
+                }
+                let usedItem = NSMenuItem(title: usedTitle, action: nil, keyEquivalent: "")
+                usedItem.tag = currentTag; currentTag += 1
+                usedItem.isEnabled = false
+                menu.insertItem(usedItem, at: insertIndex); insertIndex += 1
 
-            let remainingItem = NSMenuItem(title: "Remaining: \(otherQuotaInfo.remaining)/\(otherQuotaInfo.total)", action: nil, keyEquivalent: "")
-            remainingItem.tag = currentTag; currentTag += 1
-            remainingItem.isEnabled = false
-            menu.insertItem(remainingItem, at: insertIndex); insertIndex += 1
+                let remainingItem = NSMenuItem(title: "Remaining: \(otherQuotaInfo.remainingDescription)", action: nil, keyEquivalent: "")
+                remainingItem.tag = currentTag; currentTag += 1
+                remainingItem.isEnabled = false
+                menu.insertItem(remainingItem, at: insertIndex); insertIndex += 1
+            }
 
             if SettingsHelper.showResetTime {
                 let resetItem = NSMenuItem(title: "Reset in: \(otherQuotaInfo.formattedResetTime)", action: nil, keyEquivalent: "")

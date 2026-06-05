@@ -30,7 +30,7 @@ enum ApiError: Error, LocalizedError {
 }
 
 class ApiService {
-    private let urlString = "https://www.minimax.io/v1/api/openplatform/coding_plan/remains"
+    private let urlString = "https://www.minimax.io/v1/token_plan/remains"
     private let maxRetries = 5
     private let retryDelay: TimeInterval = 15
 

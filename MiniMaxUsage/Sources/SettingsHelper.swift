@@ -18,7 +18,6 @@ class SettingsHelper {
     private static let quotaTypeKey = "quotaType"
     private static let showIndicatorKey = "showIndicator"
     private static let showPercentKey = "showPercent"
-    private static let showRequestsKey = "showRequests"
     private static let showResetTimeKey = "showResetTime"
     private static let launchAtLoginKey = "launchAtLogin"
     private static let autoUpdateEnabledKey = "autoUpdateEnabled"
@@ -31,7 +30,8 @@ class SettingsHelper {
     private static let dailyBudgetAtDayStartKey = "dailyBudgetAtDayStart"
     private static let dailyLastRecordedRemainTimeMsKey = "dailyLastRecordedRemainTimeMs"
 
-    private static let currentSchemaVersion = 2
+    // v3: daily tracking switched from absolute request counts to weekly-percent points
+    private static let currentSchemaVersion = 3
 
     static var quotaType: QuotaType {
         get {
@@ -66,16 +66,6 @@ class SettingsHelper {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: showPercentKey)
-            NotificationCenter.default.post(name: .settingsChanged, object: nil)
-        }
-    }
-
-    static var showRequests: Bool {
-        get {
-            return UserDefaults.standard.bool(forKey: showRequestsKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: showRequestsKey)
             NotificationCenter.default.post(name: .settingsChanged, object: nil)
         }
     }
@@ -184,17 +174,20 @@ class SettingsHelper {
         }
     }
 
-    // Computed daily tracking data
+    // Computed daily tracking data.
+    // Values are expressed in weekly-percent points (the new API only reports
+    // remaining quota as a percentage, not absolute request counts).
     struct DailyTrackingData {
-        let todayUsage: Int        // Requests used today
-        let dailyBudget: Int      // Calculated daily budget limit
+        let todayUsage: Int        // Weekly-percent points consumed today
+        let dailyBudget: Int      // Calculated daily budget limit (percent points/day)
         let daysRemaining: Int    // Days left in current period
     }
 
-    // Call this on each API refresh to update daily tracking
-    // Returns today's usage based on weekly remaining comparison
-    // Budget is calculated once at start of day and stays fixed
-    // Pass weeklyRemainsTime (in ms) for accurate days calculation
+    // Call this on each API refresh to update daily tracking.
+    // currentWeeklyRemaining is the weekly remaining percentage (0–100).
+    // Today's usage is derived from the drop in remaining percentage since the
+    // start of the day; the budget is calculated once at start of day and stays fixed.
+    // Pass weeklyRemainsTime (in ms) for accurate days calculation.
     static func updateDailyTracking(currentWeeklyRemaining: Int, weeklyRemainsTimeMs: Int) -> DailyTrackingData {
         // Use UTC timezone to avoid day boundary issues with local time
         var calendar = Calendar.current
@@ -260,10 +253,6 @@ class SettingsHelper {
     // Get daily QuotaInfo with actual todayUsage and fixed daily budget
     // Pass weeklyRemainsTime for days calculation, budget and todayUsage from tracking
     static func getDailyQuotaInfo(modelRemain: ModelRemain, todayUsage: Int, dailyBudget: Int, weeklyRemainsTimeMs: Int) -> QuotaInfo {
-        let weeklyRemaining = modelRemain.currentWeeklyUsageCount
-        let daysRemaining = daysRemainingFromMs(weeklyRemainsTimeMs)
-
-        // Calculate usage percentage based on the FIXED daily budget (not recalculated)
         let usedPercent = dailyBudget > 0 ? Double(todayUsage) / Double(dailyBudget) : 0
 
         return QuotaInfo(
@@ -274,7 +263,8 @@ class SettingsHelper {
             resetTimeMs: modelRemain.weeklyRemainsTime,
             isDailyBudget: true,
             dailyBudgetLimit: dailyBudget,
-            todayUsage: todayUsage
+            todayUsage: todayUsage,
+            isUnlimited: modelRemain.isWeeklyUnlimited
         )
     }
 }

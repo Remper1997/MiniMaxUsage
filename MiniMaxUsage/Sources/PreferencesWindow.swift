@@ -12,7 +12,6 @@ class PreferencesWindow: NSWindowController {
     private var quotaTypePopup: NSPopUpButton!
     private var showIndicatorCheckbox: NSButton!
     private var showPercentCheckbox: NSButton!
-    private var showRequestsCheckbox: NSButton!
     private var showResetCheckbox: NSButton!
     private var launchAtLoginCheckbox: NSButton!
     private var autoUpdateCheckbox: NSButton!
@@ -239,7 +238,7 @@ class PreferencesWindow: NSWindowController {
         contentView.addSubview(separatorLine3)
 
         yPosition += 30
-        launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Apri MiniMaxUsage all'accesso", target: self, action: #selector(launchAtLoginChanged))
+        launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open MiniMaxUsage at login", target: self, action: #selector(launchAtLoginChanged))
         launchAtLoginCheckbox.frame = NSRect(x: 20, y: yPosition, width: 250, height: 20)
         contentView.addSubview(launchAtLoginCheckbox)
 
@@ -266,11 +265,6 @@ class PreferencesWindow: NSWindowController {
         contentView.addSubview(showResetCheckbox)
 
         yPosition += 25
-        showRequestsCheckbox = NSButton(checkboxWithTitle: "Requests (used/total)", target: self, action: #selector(displayModeChanged))
-        showRequestsCheckbox.frame = NSRect(x: 200, y: yPosition, width: 180, height: 20)
-        showRequestsCheckbox.tag = 2
-        contentView.addSubview(showRequestsCheckbox)
-
         showPercentCheckbox = NSButton(checkboxWithTitle: "Percentage (%)", target: self, action: #selector(displayModeChanged))
         showPercentCheckbox.frame = NSRect(x: 40, y: yPosition, width: 150, height: 20)
         showPercentCheckbox.tag = 1
@@ -351,7 +345,6 @@ class PreferencesWindow: NSWindowController {
     private func loadDisplaySettings() {
         quotaTypePopup.selectItem(at: SettingsHelper.quotaType.rawValue)
         showPercentCheckbox.state = SettingsHelper.showPercent ? .on : .off
-        showRequestsCheckbox.state = SettingsHelper.showRequests ? .on : .off
         showResetCheckbox.state = SettingsHelper.showResetTime ? .on : .off
         showIndicatorCheckbox.state = SettingsHelper.showIndicator ? .on : .off
         launchAtLoginCheckbox.state = SettingsHelper.launchAtLogin ? .on : .off
@@ -361,8 +354,6 @@ class PreferencesWindow: NSWindowController {
     @objc private func displayModeChanged(_ sender: NSButton) {
         if sender.tag == 1 {
             SettingsHelper.showPercent = sender.state == .on
-        } else if sender.tag == 2 {
-            SettingsHelper.showRequests = sender.state == .on
         } else if sender.tag == 3 {
             SettingsHelper.showResetTime = sender.state == .on
         }

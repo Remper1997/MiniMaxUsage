@@ -11,11 +11,23 @@ class HistoryStorage {
     }
 
     private let schemaVersionKey = "historySchemaVersion"
-    private let currentSchemaVersion = 1
+    // v2: snapshots switched from absolute request counts to percentages
+    private let currentSchemaVersion = 2
     private let maxRetentionDays = 30
 
     private init() {
         createDirectoryIfNeeded()
+        migrateIfNeeded()
+    }
+
+    // Old snapshots stored absolute request counts, which are incompatible with the
+    // new percentage-based format. Clear history when the schema version changes.
+    private func migrateIfNeeded() {
+        let stored = UserDefaults.standard.integer(forKey: schemaVersionKey)
+        if stored != currentSchemaVersion {
+            clearAllHistory()
+            UserDefaults.standard.set(currentSchemaVersion, forKey: schemaVersionKey)
+        }
     }
 
     private func createDirectoryIfNeeded() {

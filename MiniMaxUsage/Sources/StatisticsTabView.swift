@@ -130,7 +130,7 @@ struct StatisticsTabView: View {
 
         panel.begin { response in
             if response == .OK, let url = panel.url {
-                var csvContent = "Date,5h Used,Weekly Used,Daily Used,Daily Budget\n"
+                var csvContent = "Date,5h Used %,Weekly Used %,Daily Used %,Daily Budget %\n"
                 for snapshot in snapshots {
                     let dateFormatter = DateFormatter()
                     dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
@@ -254,7 +254,7 @@ struct SummaryCardView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     HStack(spacing: 8) {
-                        Text("Avg: \(formatNumber(dailyAverageUsage))/day")
+                        Text("Avg: \(formatNumber(dailyAverageUsage))%/day")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                         Text(dailyTrend)
@@ -284,7 +284,7 @@ struct SummaryCardView: View {
                         Text("\(Int(snapshot.weeklyUsedPercent * 100))%")
                             .font(.system(size: 18, weight: .semibold))
                     }
-                    Text("\(snapshot.weeklyUsed)")
+                    Text("\(snapshot.weeklyRemaining)% left")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Text("Reset: \(daysUntilWeeklyReset)")
@@ -322,16 +322,12 @@ struct SummaryCardView: View {
 
     private var daysUntilWeeklyReset: String {
         guard let snapshot = mostRecentSnapshot else { return "--" }
-        // Estimate days until reset based on weekly usage
-        let weeklyTotal = snapshot.weeklyUsed + (snapshot.dailyBudget * 7)
-        if weeklyTotal > 0 {
-            let usageRate = Double(snapshot.dailyUsed) / 7.0
-            if usageRate > 0 {
-                let daysLeft = Int(Double(weeklyTotal - snapshot.weeklyUsed) / usageRate)
-                return "\(max(0, daysLeft))d"
-            }
-        }
-        return "?"
+        // Use the real remaining time reported by the API
+        let ms = snapshot.weeklyRemainsTime
+        guard ms > 0 else { return "?" }
+        let days = ms / 86_400_000
+        let hours = (ms % 86_400_000) / 3_600_000
+        return days > 0 ? "\(days)d \(hours)h" : "\(hours)h"
     }
 }
 
@@ -398,18 +394,14 @@ struct UsageChartView: View {
         .chartYAxis {
             AxisMarks { value in
                 AxisGridLine()
-                if selectedQuotaType == .daily {
-                    if let doubleValue = value.as(Double.self) {
-                        AxisValueLabel {
-                            Text("\(Int(doubleValue))%")
-                        }
+                if let doubleValue = value.as(Double.self) {
+                    AxisValueLabel {
+                        Text("\(Int(doubleValue))%")
                     }
-                } else {
-                    AxisValueLabel()
                 }
             }
         }
-        .chartYScale(domain: selectedQuotaType == .daily ? 0...150 : 0...5000)
+        .chartYScale(domain: selectedQuotaType == .daily ? 0...150 : 0...100)
     }
 
     private func usageFor(_ snapshot: UsageSnapshot) -> Double {
