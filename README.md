@@ -12,9 +12,9 @@ MiniMaxUsage is a lightweight menu bar application that monitors and displays yo
 
 ### 📊 Multiple Quota Views
 
-- **5-Hour Window**: Track your requests within the current 5-hour rolling window
+- **5-Hour Window**: Track your usage within the current 5-hour rolling window
 - **Weekly**: Monitor your weekly quota usage and reset countdown
-- **Daily Budget**: Dynamic daily budget calculated from your weekly remaining requests divided by days left until reset
+- **Daily Budget**: Dynamic daily budget calculated from your weekly remaining percentage divided by days left until reset
 
 ### 🎨 Color-Coded Status
 
@@ -32,7 +32,6 @@ Thresholds:
 
 Choose what to show in your menu bar:
 - Percentage of usage
-- Requests used/total
 - Time until reset
 - Color indicator
 
@@ -103,7 +102,7 @@ Your API key is securely stored in your macOS Keychain.
 The menu bar shows colored indicators and usage stats:
 
 ```
-🟢 45% 1200/3000 4h 30m
+🟢 45% 4h 30m
 ```
 
 You can customize which elements are shown in Preferences.
@@ -126,11 +125,11 @@ In Preferences, choose which quota type to display:
 
 ## How It Works
 
-MiniMaxUsage polls the MiniMax API endpoint `/coding_plan/remains` at your chosen interval to fetch your current usage statistics.
+MiniMaxUsage polls the MiniMax API endpoint `/token_plan/remains` at your chosen interval to fetch your current usage statistics. The API reports your remaining quota as a percentage (0–100%) for each window, so the 5-hour and weekly views are shown as percentages. Plans without a metered limit are displayed as unlimited (∞).
 
 For the **Daily Budget** feature:
-- Budget = Weekly Remaining ÷ Days Left until reset
-- Today's usage is tracked by comparing your remaining quota at the start of each day vs. now
+- Budget = Weekly remaining percentage ÷ Days left until reset
+- Today's usage is tracked by comparing your remaining percentage at the start of each day vs. now (expressed in weekly-percent points)
 - Colors indicate if your daily usage is on track (🟢), warning (🟡), or exceeded (🔴)
 
 The daily budget is calculated once at the start of each day and remains fixed for the entire day.
