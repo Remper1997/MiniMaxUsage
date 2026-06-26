@@ -6,22 +6,20 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 2.0.0</title>
-    <sparkle:version>58</sparkle:version>
-    <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
+    <title>Version 2.0.1</title>
+    <sparkle:version>59</sparkle:version>
+    <sparkle:shortVersionString>2.0.1</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v2.0.0
+## MiniMaxUsage v2.0.1
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
-bab8a65 Fix release changelog to include only commits since the previous release
-783bffb Update README for percentage-based quota API
-62ce404 Migrate to token_plan/remains API with percentage-based quotas
-c7fde28 Update appcast.xml for v1.7.1
+1e80260 fix: correct Statistics tab data bugs
+2407cfd Update appcast.xml for v2.0.0
     ]]></description>
-    <pubDate>Fri, 05 Jun 2026 14:42:21 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v2.0.0/MiniMaxUsage.dmg" sparkle:version="58" sparkle:shortVersionString="2.0.0" type="application/octet-stream" />
+    <pubDate>Fri, 26 Jun 2026 23:19:04 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v2.0.1/MiniMaxUsage.dmg" sparkle:version="59" sparkle:shortVersionString="2.0.1" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
