@@ -359,21 +359,33 @@ struct UsageChartView: View {
 
     var body: some View {
         Chart {
-            ForEach(displaySnapshots, id: \.timestamp) { snapshot in
-                LineMark(
-                    x: .value("Date", snapshot.timestamp),
-                    y: .value("Used", usageFor(snapshot))
-                )
-                .foregroundStyle(colorForUsage(snapshot))
+            if selectedQuotaType == .daily {
+                // Daily usage is one discrete value per day (the day's final total),
+                // so render it as bars instead of an interpolated line. A single
+                // dashed reference line marks the daily budget (100%).
+                RuleMark(y: .value("Budget", 100))
+                    .foregroundStyle(.gray.opacity(0.6))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                    .annotation(position: .top, alignment: .trailing) {
+                        Text("Budget")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
 
-                if selectedQuotaType == .daily {
-                    // Budget line at 100%
+                ForEach(displaySnapshots, id: \.timestamp) { snapshot in
+                    BarMark(
+                        x: .value("Date", snapshot.timestamp, unit: .day),
+                        y: .value("Used", usageFor(snapshot))
+                    )
+                    .foregroundStyle(colorForUsage(snapshot))
+                }
+            } else {
+                ForEach(displaySnapshots, id: \.timestamp) { snapshot in
                     LineMark(
                         x: .value("Date", snapshot.timestamp),
-                        y: .value("Budget", 100)
+                        y: .value("Used", usageFor(snapshot))
                     )
-                    .foregroundStyle(.gray.opacity(0.5))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                    .foregroundStyle(colorForUsage(snapshot))
                 }
             }
         }
@@ -418,12 +430,23 @@ struct UsageChartView: View {
             percent = snapshot.dailyUsedPercent
         }
 
-        if percent < 0.5 {
-            return .green
-        } else if percent < 0.8 {
-            return .yellow
+        if selectedQuotaType == .daily {
+            // Daily uses 80%/100% budget thresholds, consistent with the menu bar.
+            if percent < 0.8 {
+                return .green
+            } else if percent < 1.0 {
+                return .yellow
+            } else {
+                return .red
+            }
         } else {
-            return .red
+            if percent < 0.5 {
+                return .green
+            } else if percent < 0.8 {
+                return .yellow
+            } else {
+                return .red
+            }
         }
     }
 }
