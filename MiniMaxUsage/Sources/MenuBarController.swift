@@ -82,6 +82,12 @@ class MenuBarController: NSObject {
             name: .settingsChanged,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(refreshData),
+            name: .forceRefreshStats,
+            object: nil
+        )
     }
 
     @objc private func settingsChanged() {
@@ -126,6 +132,9 @@ class MenuBarController: NSObject {
                         // Save usage snapshot for history charts
                         let snapshot = UsageSnapshot(from: m2, dailyTracking: currentDailyTracking, currentQuotaType: SettingsHelper.quotaType)
                         HistoryStorage.shared.saveSnapshot(snapshot)
+
+                        // Let an open Statistics tab reload with the fresh snapshot
+                        NotificationCenter.default.post(name: .statsDidUpdate, object: nil)
                     }
                 }
             } catch {
@@ -158,16 +167,18 @@ class MenuBarController: NSObject {
             return
         }
 
+        // Always keep daily tracking up to date so history snapshots capture daily
+        // usage regardless of which quota type is currently selected for display.
+        let tracking = SettingsHelper.updateDailyTracking(
+            currentWeeklyRemaining: m2.currentWeeklyRemainingPercent,
+            weeklyRemainsTimeMs: m2.weeklyRemainsTime
+        )
+        currentDailyTracking = tracking
+
         // Get quota info based on selected type
         let quotaInfo: QuotaInfo
 
         if SettingsHelper.quotaType == .daily {
-            // Update daily tracking and get daily quota info
-            let tracking = SettingsHelper.updateDailyTracking(
-                currentWeeklyRemaining: m2.currentWeeklyRemainingPercent,
-                weeklyRemainsTimeMs: m2.weeklyRemainsTime
-            )
-            currentDailyTracking = tracking
             quotaInfo = SettingsHelper.getDailyQuotaInfo(
                 modelRemain: m2,
                 todayUsage: tracking.todayUsage,

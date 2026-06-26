@@ -5,6 +5,9 @@ import UniformTypeIdentifiers
 struct StatisticsTabView: View {
     @State private var selectedTimeframe: Timeframe = .sevenDays
     @State private var snapshots: [UsageSnapshot] = []
+    // Summary card always uses full history (30d) so daily average/trend work
+    // independently of the chart's timeframe toggle.
+    @State private var summarySnapshots: [UsageSnapshot] = []
     @State private var selectedQuotaType: QuotaType = .fiveHour
     @State private var isLoading = false
     @State private var showExportSuccess = false
@@ -18,7 +21,7 @@ struct StatisticsTabView: View {
         GeometryReader { geometry in
             VStack(spacing: 12) {
                 // Summary Card
-                SummaryCardView(snapshots: snapshots)
+                SummaryCardView(snapshots: summarySnapshots)
                     .padding(.horizontal)
 
                 if snapshots.isEmpty && !isLoading {
@@ -90,6 +93,9 @@ struct StatisticsTabView: View {
             selectedQuotaType = QuotaType(rawValue: SettingsHelper.quotaType.rawValue) ?? .fiveHour
             loadData()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .statsDidUpdate)) { _ in
+            loadData()
+        }
         .alert("Export Successful", isPresented: $showExportSuccess) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -111,8 +117,12 @@ struct StatisticsTabView: View {
             case .thirtyDays:
                 data = HistoryStorage.shared.loadSnapshots30d()
             }
+            // Always load full history for the summary card so daily average and
+            // trend can compare the last 7 days against the previous 7 days.
+            let summary = HistoryStorage.shared.loadSnapshots30d()
             DispatchQueue.main.async {
                 self.snapshots = data
+                self.summarySnapshots = summary
                 self.isLoading = false
             }
         }
@@ -130,7 +140,7 @@ struct StatisticsTabView: View {
 
         panel.begin { response in
             if response == .OK, let url = panel.url {
-                var csvContent = "Date,5h Used %,Weekly Used %,Daily Used %,Daily Budget %\n"
+                var csvContent = "Date,5h Used %,Weekly Used %,Daily Used (pts),Daily Budget (pts)\n"
                 for snapshot in snapshots {
                     let dateFormatter = DateFormatter()
                     dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
@@ -163,28 +173,7 @@ struct SummaryCardView: View {
     }
 
     private var dailyAverageUsage: Int {
-        guard !snapshots.isEmpty else { return 0 }
-        // Group snapshots by day and take only the LAST snapshot of each day
-        // (dailyUsed is cumulative, so last snapshot of day = final total for that day)
-        let calendar = utcCalendar
-        var lastSnapshotOfDay: [Date: UsageSnapshot] = [:]
-
-        for snapshot in snapshots {
-            let dayStart = calendar.startOfDay(for: snapshot.timestamp)
-            if let existing = lastSnapshotOfDay[dayStart] {
-                if snapshot.timestamp > existing.timestamp {
-                    lastSnapshotOfDay[dayStart] = snapshot
-                }
-            } else {
-                lastSnapshotOfDay[dayStart] = snapshot
-            }
-        }
-
-        let uniqueDays = lastSnapshotOfDay.count
-        guard uniqueDays > 0 else { return 0 }
-
-        let totalUsage = lastSnapshotOfDay.values.reduce(0) { $0 + $1.dailyUsed }
-        return totalUsage / uniqueDays
+        return averageDailyUsageFromSnapshots(snapshots: snapshots)
     }
 
     private var dailyTrend: String {
@@ -214,6 +203,8 @@ struct SummaryCardView: View {
         }
     }
 
+    // Average of the daily budget-usage percentage across each day's final snapshot.
+    // Expressed as percent of the daily budget (0–100+), matching the headline number.
     private func averageDailyUsageFromSnapshots(snapshots: [UsageSnapshot]) -> Int {
         let calendar = utcCalendar
         var lastSnapshotOfDay: [Date: UsageSnapshot] = [:]
@@ -232,8 +223,8 @@ struct SummaryCardView: View {
         let uniqueDays = lastSnapshotOfDay.count
         guard uniqueDays > 0 else { return 0 }
 
-        let totalUsage = lastSnapshotOfDay.values.reduce(0) { $0 + $1.dailyUsed }
-        return totalUsage / uniqueDays
+        let totalPercent = lastSnapshotOfDay.values.reduce(0.0) { $0 + $1.dailyUsedPercent * 100 }
+        return Int(totalPercent / Double(uniqueDays))
     }
 
     var body: some View {
@@ -333,6 +324,7 @@ struct SummaryCardView: View {
 
 extension Notification.Name {
     static let forceRefreshStats = Notification.Name("forceRefreshStats")
+    static let statsDidUpdate = Notification.Name("statsDidUpdate")
 }
 
 @available(macOS 13.0, *)
