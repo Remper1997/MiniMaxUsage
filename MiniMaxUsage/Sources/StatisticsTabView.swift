@@ -357,6 +357,11 @@ struct UsageChartView: View {
         return peakOfDay.values.sorted { $0.timestamp < $1.timestamp }
     }
 
+    // Number of days that actually carry recorded daily usage (non-zero bars).
+    private var daysWithDailyData: Int {
+        displaySnapshots.filter { $0.dailyUsed > 0 }.count
+    }
+
     var body: some View {
         Chart {
             if selectedQuotaType == .daily {
@@ -406,6 +411,18 @@ struct UsageChartView: View {
             }
         }
         .chartYScale(domain: selectedQuotaType == .daily ? 0...150 : 0...100)
+        .overlay(alignment: .top) {
+            if selectedQuotaType == .daily && daysWithDailyData <= 1 {
+                Text("Daily history starts accumulating from the first launch after the update")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(6)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.85))
+                    .cornerRadius(6)
+                    .padding(.horizontal, 24)
+            }
+        }
     }
 
     private func usageFor(_ snapshot: UsageSnapshot) -> Double {
