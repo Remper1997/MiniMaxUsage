@@ -6,20 +6,20 @@
     <description>MiniMaxUsage update feed</description>
     <language>en</language>
   <item>
-    <title>Version 2.0.2</title>
-    <sparkle:version>60</sparkle:version>
-    <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+    <title>Version 2.0.3</title>
+    <sparkle:version>61</sparkle:version>
+    <sparkle:shortVersionString>2.0.3</sparkle:shortVersionString>
     <description><![CDATA[
-## MiniMaxUsage v2.0.2
+## MiniMaxUsage v2.0.3
 
 Automated release built by GitHub Actions.
 
 ### Changes in this release:
-0e2abf3 fix: render daily quota chart as bars to remove ambiguity
-c17f037 Update appcast.xml for v2.0.1
+dabdd5e feat: hint when daily chart has only one day of history
+73bcf2b Update appcast.xml for v2.0.2
     ]]></description>
-    <pubDate>Fri, 26 Jun 2026 23:37:00 +0000</pubDate>
-    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v2.0.2/MiniMaxUsage.dmg" sparkle:version="60" sparkle:shortVersionString="2.0.2" type="application/octet-stream" />
+    <pubDate>Tue, 07 Jul 2026 09:00:10 +0000</pubDate>
+    <enclosure url="https://github.com/Remper1997/MiniMaxUsage/releases/download/v2.0.3/MiniMaxUsage.dmg" sparkle:version="61" sparkle:shortVersionString="2.0.3" type="application/octet-stream" />
   </item>
   </channel>
 </rss>
